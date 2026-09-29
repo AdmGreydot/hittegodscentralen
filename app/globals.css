@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --font-sans: var(--font-outfit);
+  --font-serif: var(--font-abhaya-libre);
+
+  --color-brand-gold: #f2c269;
+  --color-brand-brown: #493326;
+  --color-brand-rust: #ba4e2f;
+  --color-brand-green: #4c9344;
+  --color-brand-white: #ffffff;
+  --color-brand-black: #000000;
+}
+
+/* Room for the sticky/fixed navbar, so scrolling to the top of a page or to an #anchor
+   isn't hidden behind it. Next.js also reads this when deciding whether to scroll on navigation.
+   Matches the navbar height: logo (56px, 76px from sm) + vertical padding (24px, 32px from lg). */
+html {
+  scroll-padding-top: 5rem;
+}
+
+@media (width >= 40rem) {
+  html {
+    scroll-padding-top: 6.25rem;
+  }
+}
+
+@media (width >= 64rem) {
+  html {
+    scroll-padding-top: 6.75rem;
+  }
+}
+
+/* Navbar/footer surface: 20% gold→rust gradient over solid brown. */
+@utility bg-brand-surface {
+  background:
+    linear-gradient(
+      to bottom,
+      rgb(245 200 108 / 0.2) 20%,
+      rgb(187 79 48 / 0.2) 100%
+    ),
+    var(--color-brand-brown);
+}
+
+/* Hero image overlay: rust→gold gradient; the element itself sits at 40% opacity. */
+@utility bg-brand-hero-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgb(187 79 48 / 0.8) 20%,
+    rgb(245 200 108 / 0.9) 100%
+  );
+}
