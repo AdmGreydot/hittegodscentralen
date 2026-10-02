@@ -43,17 +43,17 @@ export default function MyItems({
           <PackageOpen size={26} aria-hidden />
         </span>
         <h2 className="mt-5 font-serif text-2xl font-bold text-brand-brown">
-          Du har ingen annoncer endnu
+          Du har ingen opslag endnu
         </h2>
         <p className="mt-2 max-w-sm font-light text-zinc-500">
-          Har du mistet eller fundet noget? Opret en annonce, så andre kan hjælpe.
+          Har du mistet eller fundet noget? Opret et opslag, så andre kan hjælpe.
         </p>
         <Link
           href="/opret"
           className="mt-6 flex items-center gap-2 rounded-xl bg-brand-rust px-6 py-3 font-medium text-white transition-colors hover:bg-brand-rust/90"
         >
           <Plus size={18} aria-hidden />
-          Opret annonce
+          Opret opslag
         </Link>
       </div>
     );
@@ -80,7 +80,7 @@ export default function MyItems({
           ))}
         </div>
         <p className="text-sm text-zinc-400" aria-live="polite">
-          {visible.length} {visible.length === 1 ? "annonce" : "annoncer"}
+          {visible.length} opslag
         </p>
       </div>
 
@@ -231,7 +231,7 @@ function DeleteDialog({ item, onClose }: { item: MyItem | null; onClose: () => v
           <Trash2 size={22} aria-hidden />
         </span>
         <h2 id="delete-title" className="mt-4 font-serif text-2xl font-bold text-brand-black">
-          Slet annoncen?
+          Slet opslaget?
         </h2>
         <p className="mt-2 font-light text-zinc-500">
           <span className="font-medium text-brand-black">{item?.title}</span> bliver slettet

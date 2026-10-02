@@ -5,7 +5,7 @@ import { getCategories, getItem } from "../../../../lib/items";
 import ItemWizard from "../../../components/item-wizard/ItemWizard";
 
 export const metadata: Metadata = {
-  title: "Rediger annonce · Hittegodscentralen",
+  title: "Rediger opslag · Hittegodscentralen",
 };
 
 const dayFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Copenhagen" });

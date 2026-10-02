@@ -595,8 +595,8 @@ export function ReviewStep({ draft, categories }: { draft: ItemDraft; categories
   return (
     <>
       <StepHeading
-        title="Gennemse din annonce"
-        subtitle="Tjek at alt ser rigtigt ud, inden du opretter den."
+        title="Gennemse dit opslag"
+        subtitle="Tjek at alt ser rigtigt ud, inden du opretter det."
       />
 
       <article className="overflow-hidden rounded-2xl border border-zinc-200">

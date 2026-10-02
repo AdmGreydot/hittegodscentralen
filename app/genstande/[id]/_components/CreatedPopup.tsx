@@ -8,14 +8,16 @@ const DURATION_MS = 8000;
 
 // Shown once after creating an item (?oprettet=1). Closes by itself after a few seconds; the timer
 // pauses while the pointer or keyboard focus is on it, so the link can be used.
-export default function CreatedPopup() {
+// `persistent` (development preview) keeps it open: no auto-close, and the URL is left alone.
+export default function CreatedPopup({ persistent = false }: { persistent?: boolean }) {
   const [open, setOpen] = useState(true);
   const [paused, setPaused] = useState(false);
   // Drop ?oprettet=1 so a reload doesn't show the popup again. history.replaceState changes the
   // URL without re-rendering the page (router.replace would, and remove this popup at once).
   useEffect(() => {
+    if (persistent) return;
     window.history.replaceState(null, "", window.location.pathname);
-  }, []);
+  }, [persistent]);
 
   useEffect(() => {
     if (!open) return;
@@ -65,7 +67,7 @@ export default function CreatedPopup() {
             no bar and no auto-close — the popup stays until closed. */}
         <div className="h-1 bg-zinc-100">
           <div
-            onAnimationEnd={() => setOpen(false)}
+            onAnimationEnd={() => !persistent && setOpen(false)}
             className="h-full origin-left bg-brand-green motion-reduce:hidden"
             style={{
               animation: `shrink-x ${DURATION_MS}ms linear forwards`,

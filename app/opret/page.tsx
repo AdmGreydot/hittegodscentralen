@@ -4,7 +4,7 @@ import { getCategories } from "../../lib/items";
 import ItemWizard from "../components/item-wizard/ItemWizard";
 
 export const metadata: Metadata = {
-  title: "Opret annonce · Hittegodscentralen",
+  title: "Opret opslag · Hittegodscentralen",
 };
 
 export default async function CreateItemPage() {

@@ -35,7 +35,7 @@ const FIELD_STEP: Partial<Record<keyof ItemDraft, number>> = {
 };
 
 // Create and edit share this wizard. In "edit" mode every step has a "Gem" button and the last
-// step says "Gem ændringer"; in "create" mode you finish with "Opret annonce" on the last step.
+// step says "Gem ændringer"; in "create" mode you finish with "Opret opslag" on the last step.
 export default function ItemWizard({
   mode,
   categories,
@@ -163,7 +163,7 @@ export default function ItemWizard({
             /
           </li>
           <li aria-current="page" className="font-semibold text-brand-black">
-            {mode === "edit" ? "Rediger annonce" : "Opret annonce"}
+            {mode === "edit" ? "Rediger opslag" : "Opret opslag"}
           </li>
         </ol>
       </nav>
@@ -233,7 +233,7 @@ export default function ItemWizard({
                   )}
                   {submitting
                     ? mode === "edit" ? "Gemmer..." : "Opretter..."
-                    : mode === "edit" ? "Gem ændringer" : "Opret annonce"}
+                    : mode === "edit" ? "Gem ændringer" : "Opret opslag"}
                 </button>
               ) : (
                 <button

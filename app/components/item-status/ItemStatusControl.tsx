@@ -59,7 +59,7 @@ export default function ItemStatusControl({
   const [reopening, startReopen] = useTransition();
   const [reopenError, setReopenError] = useState<string | null>(null);
   const active = item.status === "active";
-  const label = active ? ACTION_LABEL[item.type] : "Genåbn annonce";
+  const label = active ? ACTION_LABEL[item.type] : "Genåbn opslag";
   const iconSize = variant === "icon" ? 15 : 18;
 
   const button = (
@@ -187,12 +187,12 @@ function ResolveDialog({
               id={`resolve-title-${item.id}`}
               className="mt-4 font-serif text-2xl font-bold text-brand-black"
             >
-              {done === "gave_up" ? "Annoncen er arkiveret" : "Tak fordi du gav besked"}
+              {done === "gave_up" ? "Opslaget er arkiveret" : "Tak fordi du gav besked"}
             </h2>
             <p className="mt-1 font-light text-zinc-500">
               {done === "gave_up"
-                ? "Den vises ikke længere for andre. Du kan altid genåbne den under Mine genstande."
-                : "Annoncen er afsluttet og vises ikke længere for andre."}
+                ? "Det vises ikke længere for andre. Du kan altid genåbne det under Mine genstande."
+                : "Opslaget er afsluttet og vises ikke længere for andre."}
             </p>
             <EjendelsregisteretNudge className="mt-6" />
             <button

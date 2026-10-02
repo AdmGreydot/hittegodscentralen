@@ -76,7 +76,7 @@ export default async function ProfilePage({ searchParams }: PageProps<"/profil">
               className="flex items-center justify-center gap-2 self-start rounded-xl bg-brand-rust px-6 py-3 font-medium text-white transition-colors hover:bg-brand-rust/90 sm:self-auto"
             >
               <Plus size={18} aria-hidden />
-              Opret annonce
+              Opret opslag
             </Link>
           </div>
 

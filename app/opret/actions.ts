@@ -196,7 +196,7 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
     .single();
   if (insertError || !item) {
     console.error("createItem: insert failed", insertError);
-    return { message: "Annoncen kunne ikke oprettes. Prøv igen om lidt." };
+    return { message: "Opslaget kunne ikke oprettes. Prøv igen om lidt." };
   }
 
   if (file && !(await saveImage(supabase, file, item.id, userId))) {
@@ -232,7 +232,7 @@ export async function updateItem(itemId: string, form: FormData): Promise<Create
 
   const supabase = createAdminClient();
   const owned = await ownedItem(supabase, itemId);
-  if (!owned) return { message: "Du kan kun rette dine egne annoncer." };
+  if (!owned) return { message: "Du kan kun rette dine egne opslag." };
 
   const category = await findCategory(supabase, draft.categoryId);
   if (!category) return { errors: { categoryId: "Vælg en kategori." } };
@@ -249,7 +249,7 @@ export async function updateItem(itemId: string, form: FormData): Promise<Create
 
   if (file) {
     if (!(await saveImage(supabase, file, itemId, owned.userId))) {
-      return { message: "Annoncen er gemt, men billedet kunne ikke gemmes. Prøv igen." };
+      return { message: "Opslaget er gemt, men billedet kunne ikke gemmes. Prøv igen." };
     }
     await removeImages(supabase, owned.images);
   } else if (!text(form, "keepImage")) {
@@ -263,13 +263,13 @@ export async function updateItem(itemId: string, form: FormData): Promise<Create
 export async function deleteItem(itemId: string): Promise<{ error?: string }> {
   const supabase = createAdminClient();
   const owned = await ownedItem(supabase, itemId);
-  if (!owned) return { error: "Du kan kun slette dine egne annoncer." };
+  if (!owned) return { error: "Du kan kun slette dine egne opslag." };
 
   await removeImages(supabase, owned.images);
   const { error } = await supabase.from("items").delete().eq("id", itemId).eq("user_id", owned.userId);
   if (error) {
     console.error("deleteItem failed", error);
-    return { error: "Annoncen kunne ikke slettes. Prøv igen om lidt." };
+    return { error: "Opslaget kunne ikke slettes. Prøv igen om lidt." };
   }
 
   refresh();
@@ -292,7 +292,7 @@ export async function resolveItem(
 ): Promise<{ error?: string }> {
   const supabase = createAdminClient();
   const owned = await ownedItem(supabase, itemId);
-  if (!owned) return { error: "Du kan kun afslutte dine egne annoncer." };
+  if (!owned) return { error: "Du kan kun afslutte dine egne opslag." };
 
   const { data: item } = await supabase
     .from("items")
@@ -334,7 +334,7 @@ export async function resolveItem(
     .eq("user_id", owned.userId);
   if (error) {
     console.error("resolveItem failed", error);
-    return { error: "Annoncen kunne ikke opdateres. Prøv igen om lidt." };
+    return { error: "Opslaget kunne ikke opdateres. Prøv igen om lidt." };
   }
 
   refresh();
@@ -345,7 +345,7 @@ export async function resolveItem(
 export async function reopenItem(itemId: string): Promise<{ error?: string }> {
   const supabase = createAdminClient();
   const owned = await ownedItem(supabase, itemId);
-  if (!owned) return { error: "Du kan kun genåbne dine egne annoncer." };
+  if (!owned) return { error: "Du kan kun genåbne dine egne opslag." };
 
   const { error } = await supabase
     .from("items")
@@ -354,7 +354,7 @@ export async function reopenItem(itemId: string): Promise<{ error?: string }> {
     .eq("user_id", owned.userId);
   if (error) {
     console.error("reopenItem failed", error);
-    return { error: "Annoncen kunne ikke genåbnes. Prøv igen om lidt." };
+    return { error: "Opslaget kunne ikke genåbnes. Prøv igen om lidt." };
   }
 
   refresh();

@@ -43,7 +43,7 @@ function subtitle(mode: ContactMode, role: Role) {
     case "mail":
       return `${role.The} har ikke en profil. Send en e-mail via Hittegodscentralen.`;
     case "own":
-      return "Det er din egen annonce.";
+      return "Det er dit eget opslag.";
   }
 }
 
@@ -70,7 +70,7 @@ export default function ContactCard({
     <section className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white">
       <div className="border-b border-zinc-200 px-6 py-5">
         <h2 className="font-serif text-xl font-bold text-brand-black">
-          {mode === "own" ? "Din annonce" : copy.heading}
+          {mode === "own" ? "Dit opslag" : copy.heading}
         </h2>
         <p className="mt-1 text-sm font-light text-zinc-500">
           {subtitle(mode, role)}

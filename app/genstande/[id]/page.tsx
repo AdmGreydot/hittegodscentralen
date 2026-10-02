@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/genstande/[id]">)
 
 const STATUS_NOTE = {
   resolved: "Denne genstand er markeret som løst og vises ikke længere for andre.",
-  archived: "Denne annonce er arkiveret og vises ikke længere for andre.",
+  archived: "Dette opslag er arkiveret og vises ikke længere for andre.",
 };
 
 const PREVIEW_MODES: ContactMode[] = ["chat", "login", "mail", "own"];
@@ -55,6 +55,8 @@ export default async function ItemPage({
   const query = await searchParams;
   const preview = query.preview;
   const justCreated = query.oprettet === "1";
+  // Development only: ?preview=oprettet keeps the "opslag oprettet" popup on screen for styling.
+  const previewCreated = process.env.NODE_ENV === "development" && preview === "oprettet";
   const mode =
     process.env.NODE_ENV === "development" &&
     PREVIEW_MODES.includes(preview as ContactMode)
@@ -108,7 +110,7 @@ export default async function ItemPage({
       </nav>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        {justCreated && <CreatedPopup />}
+        {(justCreated || previewCreated) && <CreatedPopup persistent={previewCreated} />}
 
         {item.status !== "active" && (
           <p className="mb-6 flex items-center gap-2 rounded-xl bg-brand-gold/20 px-4 py-3 text-sm text-brand-brown">

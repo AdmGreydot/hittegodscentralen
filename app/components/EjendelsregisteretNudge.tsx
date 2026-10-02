@@ -1,17 +1,20 @@
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
-const EJENDELSREGISTERET_URL = "https://ejendelsregisteret.dk";
+const EJENDELSREGISTERET_URL = "https://www.ejendelsregisteret.dk";
 
 // "Mist aldrig dine ting igen" box, shown after creating or finishing an item.
-export default function EjendelsregisteretNudge({ className = "" }: { className?: string }) {
+export default function EjendelsregisteretNudge({
+  className = "",
+}: {
+  className?: string;
+}) {
   return (
     <div className={`rounded-xl bg-brand-gold/15 p-4 ${className}`}>
       <div className="flex gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-brown text-white">
-          <ShieldCheck size={18} aria-hidden />
-        </span>
         <p className="text-left text-sm text-brand-brown">
-          <span className="block font-semibold">Mist aldrig dine ting igen</span>
+          <span className="block font-semibold">
+            Mist aldrig dine ting igen
+          </span>
           Registrér dig på ejendelsregisteret.dk
         </p>
       </div>

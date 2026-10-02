@@ -15,7 +15,7 @@ export async function generateMetadata({
   params,
 }: PageProps<"/opret/[type]">): Promise<Metadata> {
   const config = TYPES[(await params).type];
-  return { title: `${config?.title ?? "Opret annonce"} · Hittegodscentralen` };
+  return { title: `${config?.title ?? "Opret opslag"} · Hittegodscentralen` };
 }
 
 export default async function CreateTypedItemPage({ params }: PageProps<"/opret/[type]">) {
