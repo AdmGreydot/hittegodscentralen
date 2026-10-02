@@ -6,7 +6,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   Building2,
   CalendarDays,
-  CircleCheck,
   ExternalLink,
   Info,
   Mailbox,
@@ -17,7 +16,10 @@ import {
 import { getCurrentUserId } from "../../../lib/auth";
 import { getItem, getSimilarItems, type ItemDetail } from "../../../lib/items";
 import { formatDate, PLACEHOLDER_IMAGE, type ItemCard } from "../../../lib/item-card";
+import { getConversations } from "../../../lib/messages";
+import ItemStatusControl from "../../components/item-status/ItemStatusControl";
 import ContactCard, { type ContactMode } from "./_components/ContactCard";
+import CreatedPopup from "./_components/CreatedPopup";
 import ImageGallery from "./_components/ImageGallery";
 
 export async function generateMetadata({ params }: PageProps<"/genstande/[id]">): Promise<Metadata> {
@@ -59,6 +61,14 @@ export default async function ItemPage({
       ? (preview as ContactMode)
       : contactMode(item, viewerId);
 
+  // The poster can mark the item as handed over, picking which conversation it went through.
+  const isOwner = viewerId !== null && viewerId === item.ownerId;
+  const itemConversations = isOwner
+    ? (await getConversations(viewerId))
+        .filter((c) => c.itemId === item.id)
+        .map((c) => ({ id: c.id, otherName: c.otherName }))
+    : [];
+
   const similar = item.category ? await getSimilarItems(item.category.id, item.id) : [];
   const place = [item.address, item.city].filter(Boolean).join(", ");
   const mapQuery =
@@ -98,15 +108,7 @@ export default async function ItemPage({
       </nav>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        {justCreated && (
-          <p
-            role="status"
-            className="mb-6 flex items-center gap-2 rounded-xl bg-brand-green/10 px-4 py-3 text-sm font-medium text-brand-green"
-          >
-            <CircleCheck size={18} aria-hidden />
-            Din annonce er oprettet og kan nu ses af alle.
-          </p>
-        )}
+        {justCreated && <CreatedPopup />}
 
         {item.status !== "active" && (
           <p className="mb-6 flex items-center gap-2 rounded-xl bg-brand-gold/20 px-4 py-3 text-sm text-brand-brown">
@@ -120,7 +122,15 @@ export default async function ItemPage({
             <ImageGallery images={item.images} title={item.title} type={item.type} />
             {/* On small screens the description comes right after the image. */}
             <Description item={item} className="lg:hidden" />
-            <ContactCard mode={mode} type={item.type} owner={item.owner} itemId={item.id} />
+            <ContactCard mode={mode} type={item.type} owner={item.owner} itemId={item.id}>
+              {isOwner && (
+                <ItemStatusControl
+                  item={{ id: item.id, title: item.title, type: item.type, status: item.status }}
+                  conversations={itemConversations}
+                  variant="button"
+                />
+              )}
+            </ContactCard>
           </div>
 
           <aside className="space-y-6">

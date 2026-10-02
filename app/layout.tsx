@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Abhaya_Libre, Outfit } from "next/font/google";
+import { getCurrentUser } from "../lib/auth";
+import { AuthModalProvider } from "./components/auth/AuthModal";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import "./globals.css";
@@ -20,16 +22,19 @@ export const metadata: Metadata = {
   description: "Den hurtigste vej mellem taber og finder",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getCurrentUser();
   return (
     <html
       lang="da"
       className={`${outfit.variable} ${abhayaLibre.variable} h-full scroll-smooth motion-reduce:scroll-auto antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Navbar />
-        {children}
-        <Footer />
+        <AuthModalProvider>
+          <Navbar user={user && { fullName: user.fullName, email: user.email }} />
+          {children}
+          <Footer />
+        </AuthModalProvider>
       </body>
     </html>
   );

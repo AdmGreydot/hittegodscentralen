@@ -325,3 +325,32 @@ export async function getCategories() {
   if (error) throw error;
   return data.sort((a, b) => a.name.localeCompare(b.name, "da"));
 }
+
+export type MyItem = ItemCard & { status: ItemDetail["status"]; createdAt: string };
+
+// All of a user's own items, every status, newest first — for the profile page.
+export async function getMyItems(userId: string): Promise<MyItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("items")
+    .select(`${CARD_COLUMNS}, status, created_at`)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .order("created_at", { referencedTable: "item_images", ascending: true })
+    .limit(1, { referencedTable: "item_images" })
+    .returns<(ItemRow & { status: ItemDetail["status"]; created_at: string })[]>();
+  if (error) throw error;
+  return data.map((row) => ({ ...toCard(row), status: row.status, createdAt: row.created_at }));
+}
+
+// The user's own profile row. Only readable by the user themself (RLS).
+export async function getOwnProfile(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select("full_name, created_at")
+    .eq("id", userId)
+    .maybeSingle<{ full_name: string; created_at: string }>();
+  if (error) throw error;
+  return data;
+}

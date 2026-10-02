@@ -3,13 +3,14 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Loader2, Save } from "lucide-react";
-import { createItem } from "../../opret/actions";
+import { createItem, updateItem } from "../../opret/actions";
 import {
   EMPTY_DRAFT,
   HONEYPOT_FIELD,
   STEPS,
   todayInDenmark,
   validateStep,
+  visibleSteps,
   type DraftErrors,
   type ItemDraft,
 } from "./draft";
@@ -39,17 +40,23 @@ export default function ItemWizard({
   mode,
   categories,
   initialDraft,
+  itemId,
+  userEmail,
 }: {
   mode: "create" | "edit";
   categories: Category[];
   initialDraft?: Partial<ItemDraft>;
+  itemId?: string; // the item being edited
+  userEmail: string | null; // set when logged in: the contact step is skipped and this is used
 }) {
   // The date defaults to today (Danish time); an existing date from initialDraft wins when editing.
   const [draft, setDraft] = useState<ItemDraft>(() => ({
     ...EMPTY_DRAFT,
     occurredOn: todayInDenmark(),
     ...initialDraft,
+    ...(userEmail && { email: userEmail }),
   }));
+  const steps = visibleSteps(Boolean(userEmail));
   // A type chosen before the wizard opened (e.g. "Opret tabt" on the frontpage) skips step 1.
   // When editing, every step is already filled in, so all are reachable.
   const firstStep = draft.type ? 1 : 0;
@@ -62,6 +69,7 @@ export default function ItemWizard({
   const honeypotRef = useRef<HTMLInputElement>(null);
 
   const isLast = step === STEPS.length - 1;
+  const position = steps.indexOf(step);
 
   function update(patch: Partial<ItemDraft>) {
     setDraft((d) => ({ ...d, ...patch }));
@@ -89,12 +97,12 @@ export default function ItemWizard({
       setErrors(stepErrors);
       return;
     }
-    goTo(step + 1);
+    goTo(steps[position + 1]);
   }
 
   // Validate every step; jump to the first one with a problem.
   function validateAll() {
-    for (let i = 0; i < STEPS.length; i++) {
+    for (const i of steps) {
       const stepErrors = validateStep(i, draft);
       if (Object.keys(stepErrors).length) {
         goTo(i);
@@ -108,12 +116,6 @@ export default function ItemWizard({
   function submit() {
     if (!validateAll()) return;
 
-    if (mode === "edit") {
-      // TODO: update the item once editing is built.
-      setNotice("Ændringer kan ikke gemmes endnu — funktionen er på vej.");
-      return;
-    }
-
     const form = new FormData();
     const fields = [
       "type", "title", "description", "categoryId", "region",
@@ -126,11 +128,14 @@ export default function ItemWizard({
       form.set("longitude", String(draft.longitude));
     }
     form.set(HONEYPOT_FIELD, honeypotRef.current?.value ?? "");
+    // The existing image is still shown, so keep it (a new file replaces it anyway).
+    if (draft.imageUrl) form.set("keepImage", "1");
 
     setNotice(null);
     startSubmit(async () => {
-      // On success the action redirects to the new item, so we only get here on errors.
-      const result = await createItem(form);
+      // On success the action redirects to the item, so we only get here on errors.
+      const result =
+        mode === "edit" && itemId ? await updateItem(itemId, form) : await createItem(form);
       if (result.errors && Object.keys(result.errors).length) {
         const steps = Object.keys(result.errors).map((f) => FIELD_STEP[f as keyof ItemDraft] ?? 0);
         goTo(Math.min(...steps));
@@ -147,11 +152,11 @@ export default function ItemWizard({
         <ol className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-6 text-sm sm:px-6">
           <li>
             <Link
-              href={mode === "edit" ? "/mine-genstande" : "/genstande"}
+              href={mode === "edit" ? "/profil" : "/genstande"}
               className="flex items-center gap-2 font-medium text-brand-black/80 hover:text-brand-black"
             >
               <ArrowLeft size={16} aria-hidden />
-              {mode === "edit" ? "Mine genstande" : "Genstande"}
+              {mode === "edit" ? "Min profil" : "Genstande"}
             </Link>
           </li>
           <li aria-hidden className="text-zinc-300">
@@ -164,7 +169,7 @@ export default function ItemWizard({
       </nav>
 
       <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
-        <Stepper current={step} reached={reached} onSelect={goTo} />
+        <Stepper steps={steps} current={step} reached={reached} onSelect={goTo} />
 
         <div
           ref={cardRef}
@@ -190,21 +195,22 @@ export default function ItemWizard({
           <div className="flex items-center justify-between gap-3 border-t border-zinc-200 bg-zinc-50 px-6 py-5 sm:px-8">
             <button
               type="button"
-              onClick={() => goTo(step - 1)}
-              disabled={step === 0}
+              onClick={() => goTo(steps[position - 1])}
+              disabled={position === 0}
               className="flex h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 font-medium text-brand-black transition-colors hover:border-brand-brown/40 disabled:cursor-not-allowed disabled:border-zinc-100 disabled:bg-transparent disabled:text-zinc-300"
             >
               <ArrowLeft size={16} aria-hidden />
               Tilbage
             </button>
 
-            <ProgressDots current={step} />
+            <ProgressDots steps={steps} current={step} />
 
             <div className="flex items-center gap-3">
               {mode === "edit" && !isLast && (
                 <button
                   type="button"
                   onClick={submit}
+                  disabled={submitting}
                   className="flex h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 font-medium text-brand-black transition-colors hover:border-brand-brown/40"
                 >
                   <Save size={16} aria-hidden />
@@ -225,7 +231,9 @@ export default function ItemWizard({
                   ) : (
                     <Check size={16} aria-hidden />
                   )}
-                  {submitting ? "Opretter..." : mode === "edit" ? "Gem ændringer" : "Opret annonce"}
+                  {submitting
+                    ? mode === "edit" ? "Gemmer..." : "Opretter..."
+                    : mode === "edit" ? "Gem ændringer" : "Opret annonce"}
                 </button>
               ) : (
                 <button
@@ -251,12 +259,12 @@ export default function ItemWizard({
   );
 }
 
-function ProgressDots({ current }: { current: number }) {
+function ProgressDots({ steps, current }: { steps: number[]; current: number }) {
   return (
     <div aria-hidden className="hidden items-center gap-1.5 sm:flex">
-      {STEPS.map((label, i) => (
+      {steps.map((i) => (
         <span
-          key={label}
+          key={i}
           className={`h-1.5 rounded-full transition-all ${
             i === current ? "w-5 bg-brand-brown" : i < current ? "w-1.5 bg-brand-brown" : "w-1.5 bg-zinc-300"
           }`}

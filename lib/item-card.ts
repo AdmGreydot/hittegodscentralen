@@ -1,6 +1,10 @@
 // Shared between server data fetching and client components — keep free of server-only imports.
 
 export type ItemType = "lost" | "found";
+export type ItemStatus = "active" | "resolved" | "archived";
+
+// How an item ended when its poster marked it as done. See the item_resolution enum.
+export type ItemResolution = "returned" | "found_self" | "gave_up" | "police" | "other";
 
 export type ItemCard = {
   id: string;

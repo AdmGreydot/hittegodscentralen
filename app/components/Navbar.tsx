@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogIn, Menu, UserPlus, X } from "lucide-react";
+import { LogIn, LogOut, Menu, UserPlus, UserRound, X } from "lucide-react";
+import { initials } from "../../lib/initials";
+import { logOut } from "../auth/actions";
+import { useAuthModal } from "./auth/AuthModal";
 import Brand from "./Brand";
 
 const NAV_LINKS = [
@@ -19,8 +22,11 @@ const MOBILE_LINKS = [{ href: "/", label: "Forside" }, ...NAV_LINKS];
 const HERO_ROUTES = ["/", "/om-os"];
 const SCROLL_THRESHOLD = 24;
 
-export default function Navbar() {
+type NavUser = { fullName: string; email: string } | null;
+
+export default function Navbar({ user }: { user: NavUser }) {
   const pathname = usePathname();
+  const openAuth = useAuthModal();
   const hasHero = HERO_ROUTES.includes(pathname);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -87,18 +93,41 @@ export default function Navbar() {
         </ul>
 
         <div className="hidden items-center gap-4 lg:flex">
-          <Link
-            href="/log-ind"
-            className="text-[17px] text-white/70 transition-colors hover:text-white"
-          >
-            Log ind
-          </Link>
-          <Link
-            href="/opret-konto"
-            className="rounded-lg bg-brand-gold px-5 py-2.5 text-[17px] font-medium text-brand-black transition-colors hover:bg-brand-gold/90"
-          >
-            Opret konto
-          </Link>
+          {user ? (
+            <>
+              <form action={logOut}>
+                <button
+                  type="submit"
+                  className="text-[17px] text-white/70 transition-colors hover:text-white"
+                >
+                  Log ud
+                </button>
+              </form>
+              <Link
+                href="/profil"
+                className="flex gap-2.5 rounded-lg bg-brand-gold py-1.5 pr-2 pl-1.5 text-[17px] font-medium text-brand-black transition-colors hover:bg-brand-gold/90"
+              >
+                <p className="flex justify-center items-center"> Min profil</p>
+              </Link>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => openAuth("login")}
+                className="text-[17px] text-white/70 transition-colors hover:text-white"
+              >
+                Log ind
+              </button>
+              <button
+                type="button"
+                onClick={() => openAuth("signup")}
+                className="rounded-lg bg-brand-gold px-5 py-2.5 text-[17px] font-medium text-brand-black transition-colors hover:bg-brand-gold/90"
+              >
+                Opret konto
+              </button>
+            </>
+          )}
         </div>
 
         <button
@@ -176,20 +205,51 @@ export default function Navbar() {
           </ul>
 
           <div className="mt-auto flex flex-col gap-3 border-t border-white/10 p-5">
-            <Link
-              href="/log-ind"
-              className="flex items-center justify-center gap-2 rounded-md border border-white/25 px-4 py-2.5 text-white/90 transition-colors hover:border-white/50 hover:text-white"
-            >
-              <LogIn size={18} aria-hidden />
-              Log ind
-            </Link>
-            <Link
-              href="/opret-konto"
-              className="flex items-center justify-center gap-2 rounded-md border border-brand-gold/60 px-4 py-2.5 text-brand-gold transition-colors hover:border-brand-gold hover:bg-brand-gold/10"
-            >
-              <UserPlus size={18} aria-hidden />
-              Opret konto
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/profil"
+                  className="flex items-center justify-center gap-2 rounded-md border border-brand-gold/60 px-4 py-2.5 text-brand-gold transition-colors hover:border-brand-gold hover:bg-brand-gold/10"
+                >
+                  <UserRound size={18} aria-hidden />
+                  Min profil
+                </Link>
+                <form action={logOut}>
+                  <button
+                    type="submit"
+                    className="flex w-full items-center justify-center gap-2 rounded-md border border-white/25 px-4 py-2.5 text-white/90 transition-colors hover:border-white/50 hover:text-white"
+                  >
+                    <LogOut size={18} aria-hidden />
+                    Log ud
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    openAuth("login");
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-md border border-white/25 px-4 py-2.5 text-white/90 transition-colors hover:border-white/50 hover:text-white"
+                >
+                  <LogIn size={18} aria-hidden />
+                  Log ind
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    openAuth("signup");
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-md border border-brand-gold/60 px-4 py-2.5 text-brand-gold transition-colors hover:border-brand-gold hover:bg-brand-gold/10"
+                >
+                  <UserPlus size={18} aria-hidden />
+                  Opret konto
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

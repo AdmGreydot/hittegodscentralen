@@ -55,3 +55,23 @@ html {
     rgb(245 200 108 / 0.9) 100%
   );
 }
+
+/* "Dit opslag er oprettet" popup (app/genstande/[id]/_components/CreatedPopup.tsx). */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+@keyframes shrink-x {
+  to {
+    transform: scaleX(0);
+  }
+}

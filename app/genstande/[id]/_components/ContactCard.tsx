@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import Link from "next/link";
-import { Info, Lock, LogIn, Mail, Send, UserPlus } from "lucide-react";
+import { useState, useTransition, type ReactNode } from "react";
+import { Info, Loader2, Lock, LogIn, Mail, Send, UserPlus } from "lucide-react";
+import { initials } from "../../../../lib/initials";
 import type { ItemType } from "../../../../lib/item-card";
+import { useAuthModal } from "../../../components/auth/AuthModal";
+import { startConversation } from "../../../profil/actions";
 
 // chat:  the poster has an account and the viewer is logged in
 // login: the poster has an account, but the viewer must log in to write to them
@@ -48,27 +50,18 @@ function subtitle(mode: ContactMode, role: Role) {
 // Name of the mail form's honeypot field. Sounds like a real field so bots fill it in.
 export const HONEYPOT_FIELD = "website";
 
-function initials(name: string) {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0].toUpperCase())
-      .join("") || "?"
-  );
-}
-
 export default function ContactCard({
   mode,
   type,
   owner,
   itemId,
+  children,
 }: {
   mode: ContactMode;
   type: ItemType;
   owner: Owner;
   itemId: string;
+  children?: ReactNode; // extra controls for the poster, shown in "own" mode
 }) {
   const copy = COPY[type];
   const role = ROLE[type];
@@ -86,10 +79,10 @@ export default function ContactCard({
 
       <div className="p-6">
         {mode === "chat" && (
-          <ChatForm owner={owner} role={role} placeholder={copy.placeholder} />
+          <ChatForm owner={owner} role={role} placeholder={copy.placeholder} itemId={itemId} />
         )}
         {mode === "login" && (
-          <LoginPrompt owner={owner} role={role} itemId={itemId} />
+          <LoginPrompt owner={owner} role={role} />
         )}
         {mode === "mail" && (
           <MailForm role={role} placeholder={copy.placeholder} />
@@ -105,6 +98,7 @@ export default function ContactCard({
             under din profil.
           </p>
         )}
+        {mode === "own" && children && <div className="mt-4">{children}</div>}
       </div>
     </section>
   );
@@ -128,20 +122,26 @@ function ChatForm({
   owner,
   role,
   placeholder,
+  itemId,
 }: {
   owner: Owner;
   role: Role;
   placeholder: string;
+  itemId: string;
 }) {
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [sending, startSending] = useTransition();
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        // TODO: send via the chat backend once it exists.
-        setNotice("Beskeder kan ikke sendes endnu — funktionen er på vej.");
+        startSending(async () => {
+          // On success the action redirects to the conversation on the profile page.
+          const result = await startConversation(itemId, message);
+          if (result.error) setNotice(result.error);
+        });
       }}
     >
       <OwnerRow owner={owner} role={role} />
@@ -155,8 +155,14 @@ function ChatForm({
         label={`Besked til ${role.the}`}
       />
       <SubmitButton
-        disabled={!message.trim()}
-        icon={<Send size={18} aria-hidden />}
+        disabled={!message.trim() || sending}
+        icon={
+          sending ? (
+            <Loader2 size={18} className="animate-spin" aria-hidden />
+          ) : (
+            <Send size={18} aria-hidden />
+          )
+        }
       >
         Send besked
       </SubmitButton>
@@ -166,17 +172,9 @@ function ChatForm({
   );
 }
 
-function LoginPrompt({
-  owner,
-  role,
-  itemId,
-}: {
-  owner: Owner;
-  role: Role;
-  itemId: string;
-}) {
-  // Bring the user back to this item after logging in.
-  const next = encodeURIComponent(`/genstande/${itemId}`);
+function LoginPrompt({ owner, role }: { owner: Owner; role: Role }) {
+  // The popup refreshes this page after logging in, so the chat form appears right here.
+  const openAuth = useAuthModal();
   const name = owner?.fullName.split(" ")[0] || role.the;
 
   return (
@@ -195,20 +193,22 @@ function LoginPrompt({
         </p>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Link
-          href={`/log-ind?next=${next}`}
+        <button
+          type="button"
+          onClick={() => openAuth("login")}
           className="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-brown font-medium text-white transition-colors hover:bg-brand-brown/90"
         >
           <LogIn size={18} aria-hidden />
           Log ind
-        </Link>
-        <Link
-          href={`/opret-konto?next=${next}`}
+        </button>
+        <button
+          type="button"
+          onClick={() => openAuth("signup")}
           className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-brand-brown font-medium text-brand-brown transition-colors hover:bg-brand-brown hover:text-white"
         >
           <UserPlus size={18} aria-hidden />
           Opret konto
-        </Link>
+        </button>
       </div>
     </>
   );
