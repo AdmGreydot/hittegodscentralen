@@ -2,6 +2,7 @@
 
 Den hurtigste vej mellem taber og finder. Bygget med Next.js, Supabase, Resend og Tailwind CSS.
 
+
 ## Kom i gang
 
 ```bash
