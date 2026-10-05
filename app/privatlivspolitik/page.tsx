@@ -212,13 +212,14 @@ const SECTIONS: LegalSection[] = [
     body: (
       <ul>
         <li>
-          <strong>Konto:</strong> indtil du beder os om at slette den.
+          <strong>Konto:</strong> indtil du sletter den under din profil.
         </li>
         <li>
           <strong>Opslag:</strong> er synlige i {ITEM_LIFETIME_MONTHS} måneder,
           eller til du forlænger, løser eller sletter dem. Derefter gemmes de
           skjult, så du kan se dem under din profil og genåbne dem, indtil du
-          sletter dem eller din konto.
+          sletter dem eller din konto. Opslag oprettet uden profil kan du administrere og slette via
+          linket i de e-mails, vi sender dig.
         </li>
         <li>
           <strong>Beskeder:</strong> så længe opslaget og jeres konti findes.

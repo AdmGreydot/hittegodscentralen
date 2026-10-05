@@ -1,7 +1,8 @@
 "use server";
 
 import type { ItemStatus, ItemType } from "../../lib/item-card";
-import { contactFormMail, itemRelayMail } from "../../lib/emails";
+import { contactFormMail, itemRelayMail, senderReceiptMail } from "../../lib/emails";
+import { manageUrl } from "../../lib/item-expiry";
 import { CONTACT_INBOX, sendMail, withinRateLimit } from "../../lib/mail";
 import { createAdminClient } from "../../lib/supabase/admin";
 
@@ -59,7 +60,9 @@ export async function sendContactMail(form: FormData): Promise<MailResult> {
     replyTo: sender.email,
     ...contactFormMail(sender),
   });
-  return sent ? { sent: true } : { message: SEND_FAILED };
+  if (!sent) return { message: SEND_FAILED };
+  await sendMail({ to: sender.email, ...senderReceiptMail({ name: sender.name, message: sender.message }) });
+  return { sent: true };
 }
 
 // A message to someone who posted an item without an account. Their e-mail never leaves the
@@ -93,7 +96,23 @@ export async function sendItemMail(itemId: string, form: FormData): Promise<Mail
   const sent = await sendMail({
     to: item.contact_email,
     replyTo: sender.email,
-    ...itemRelayMail({ sender, itemId, itemTitle: item.title, itemType: item.type }),
+    ...itemRelayMail({
+      sender,
+      itemId,
+      itemTitle: item.title,
+      itemType: item.type,
+      manageUrl: manageUrl(itemId),
+    }),
   });
+  if (sent) {
+    await sendMail({
+      to: sender.email,
+      ...senderReceiptMail({
+        name: sender.name,
+        message: sender.message,
+        item: { title: item.title, type: item.type },
+      }),
+    });
+  }
   return sent ? { sent: true } : { message: SEND_FAILED };
 }

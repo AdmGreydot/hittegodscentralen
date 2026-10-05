@@ -55,8 +55,8 @@ const SECTIONS: LegalSection[] = [
           konto.
         </li>
         <li>
-          Du kan til enhver tid bede os om at slette din konto. Så sletter vi også dine opslag og
-          beskeder.
+          Du kan til enhver tid slette din konto under din profil. Så sletter vi også dine opslag,
+          billeder og beskeder.
         </li>
       </ul>
     ),

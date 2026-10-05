@@ -5,6 +5,7 @@ import { getCurrentUser } from "../../lib/auth";
 import { initials } from "../../lib/initials";
 import { getMyItems, getOwnProfile } from "../../lib/items";
 import { getConversations, getMessages } from "../../lib/messages";
+import DeleteAccount from "./_components/DeleteAccount";
 import LoggedOut from "./_components/LoggedOut";
 import Messages from "./_components/Messages";
 import MyItems from "./_components/MyItems";
@@ -112,6 +113,7 @@ export default async function ProfilePage({ searchParams }: PageProps<"/profil">
             showThreadOnMobile={Boolean(requested && active?.id === requested)}
           />
         )}
+        {tab === "items" && <DeleteAccount />}
       </div>
     </main>
   );

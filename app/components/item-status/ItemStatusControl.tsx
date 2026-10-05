@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { CircleCheck, Loader2, RotateCcw, X } from "lucide-react";
-import type { ItemResolution, ItemStatus, ItemType } from "../../../lib/item-card";
+import { RESOLUTION_OPTIONS, type ItemResolution, type ItemStatus, type ItemType } from "../../../lib/item-card";
 import { reopenItem, resolveItem } from "../../opret/actions";
 import EjendelsregisteretNudge from "../EjendelsregisteretNudge";
 import Tooltip from "../Tooltip";
@@ -19,18 +19,7 @@ const QUESTION = {
   found: "Hvad skete der med genstanden?",
 };
 
-const OPTIONS: Record<ItemType, { value: ItemResolution; label: string }[]> = {
-  lost: [
-    { value: "returned", label: "Ja, jeg har fået den igen" },
-    { value: "found_self", label: "Ja, jeg fandt den selv" },
-    { value: "gave_up", label: "Nej, jeg har opgivet at finde den" },
-  ],
-  found: [
-    { value: "returned", label: "Ejeren har fået den" },
-    { value: "police", label: "Afleveret til politiet eller et hittegodskontor" },
-    { value: "other", label: "Andet" },
-  ],
-};
+const OPTIONS = RESOLUTION_OPTIONS;
 
 const WHO = { lost: "Hvem fandt den?", found: "Hvem var ejeren?" };
 

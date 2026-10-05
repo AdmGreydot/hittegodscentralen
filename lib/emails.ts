@@ -22,6 +22,14 @@ function greeting(fullName: string) {
 export const inboxUrl = (conversationId?: string) =>
   `${SITE_URL}/profil?fane=beskeder${conversationId ? `&samtale=${conversationId}` : ""}`;
 
+// Posters without an account manage their item through a signed link in their mails.
+const MANAGE_NOTE =
+  "Gem denne e-mail. Med linket kan du markere opslaget som løst, forlænge det eller slette det:";
+
+function manageHtml(url: string) {
+  return `<p style="margin:0 0 16px;padding:12px 16px;background:#fdf6e7;border-radius:10px;font-size:14px;">Gem denne e-mail. Med linket kan du markere opslaget som løst, forlænge det eller slette det. <a href="${escapeHtml(url)}" style="color:${BRAND.rust};font-weight:bold;">Administrer dit opslag</a></p>`;
+}
+
 const NO_REPLY_NOTE =
   "Du kan ikke svare direkte på denne e-mail. Svar i din indbakke på Hittegodscentralen.";
 
@@ -112,6 +120,7 @@ export function itemCreatedMail(input: {
   itemTitle: string;
   itemType: ItemType;
   hasAccount: boolean;
+  manageUrl?: string; // for posters without an account
 }): Mail {
   const link = `${SITE_URL}/genstande/${input.itemId}`;
   const what = input.itemType === "lost" ? "din tabte genstand" : "den genstand, du har fundet";
@@ -122,12 +131,22 @@ export function itemCreatedMail(input: {
   const lifetime = `Opslaget er aktivt i ${ITEM_LIFETIME_MONTHS} måneder. Vi skriver til dig, inden det udløber, så du kan forlænge det.`;
   return {
     subject: `Dit opslag "${input.itemTitle}" er oprettet`,
-    text: `${greeting(input.fullName)},\n\n${intro}\n\n${next}\n\n${lifetime}\n\nSe opslaget: ${link}`,
+    text: [
+      `${greeting(input.fullName)},`,
+      intro,
+      next,
+      lifetime,
+      `Se opslaget: ${link}`,
+      input.manageUrl && `${MANAGE_NOTE} ${input.manageUrl}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
     html: mailHtml(
       `<p style="margin-top:0;">${escapeHtml(greeting(input.fullName))},</p>
 <p>${escapeHtml(intro)}</p>
 <p>${next}</p>
 ${mailButton(link, "Se dit opslag")}
+${input.manageUrl ? manageHtml(input.manageUrl) : ""}
 <p style="font-size:13px;color:#71717a;">${lifetime}</p>`,
     ),
   };
@@ -220,6 +239,7 @@ export function itemRelayMail(input: {
   itemId: string;
   itemTitle: string;
   itemType: ItemType;
+  manageUrl?: string;
 }): Mail {
   const { sender } = input;
   const itemUrl = `${SITE_URL}/genstande/${input.itemId}`;
@@ -232,14 +252,25 @@ export function itemRelayMail(input: {
     `Når du svarer, kan ${sender.name} se din e-mail-adresse. Vi har ikke delt den med nogen.`;
   return {
     subject: `Ny besked om "${input.itemTitle}" · Hittegodscentralen`,
-    text: ["Hej,", intro, sender.message, senderLines(sender), replyNote, `Se opslaget: ${itemUrl}`].join("\n\n"),
+    text: [
+      "Hej,",
+      intro,
+      sender.message,
+      senderLines(sender),
+      replyNote,
+      `Se opslaget: ${itemUrl}`,
+      input.manageUrl && `Er genstanden kommet hjem? Administrer dit opslag: ${input.manageUrl}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
     html: mailHtml(
       `<p style="margin-top:0;">Hej,</p>
 <p>${escapeHtml(intro)}</p>
 ${htmlQuote(sender.message)}
 ${htmlParagraph(senderLines(sender))}
 <p>${escapeHtml(replyNote)}</p>
-${mailButton(itemUrl, "Se opslaget")}`,
+${mailButton(itemUrl, "Se opslaget")}
+${input.manageUrl ? `<p style="font-size:13px;color:#71717a;">Er genstanden kommet hjem? <a href="${escapeHtml(input.manageUrl)}" style="color:#71717a;">Administrer dit opslag</a>.</p>` : ""}`,
     ),
   };
 }
@@ -258,13 +289,16 @@ export function itemExpiringMail(input: {
   expiresAt: string;
   extendUrl: string;
   hasAccount: boolean;
+  manageUrl?: string;
 }): Mail {
   const date = longDate.format(new Date(input.expiresAt));
   const intro = `Dit opslag "${input.itemTitle}" udløber den ${date}. Derefter fjernes det fra Hittegodscentralen, og ingen kan længere finde det.`;
   const ask = `Leder du stadig, eller har du stadig genstanden? Så forlæng opslaget med ${ITEM_LIFETIME_MONTHS} måneder.`;
   const done = input.hasAccount
     ? "Er genstanden kommet hjem, kan du markere opslaget som løst under din profil. Ellers behøver du ikke gøre noget."
-    : "Er genstanden kommet hjem, behøver du ikke gøre noget. Opslaget forsvinder af sig selv.";
+    : "Er genstanden kommet hjem, kan du markere opslaget som løst. Ellers behøver du ikke gøre noget.";
+  const doneLink = input.manageUrl ?? `${SITE_URL}/genstande/${input.itemId}`;
+  const doneLabel = input.manageUrl ? "Administrer dit opslag" : "Se opslaget";
   return {
     subject: `Dit opslag "${input.itemTitle}" udløber om ${EXPIRY_WARNING_DAYS} dage`,
     text: [
@@ -273,14 +307,146 @@ export function itemExpiringMail(input: {
       ask,
       `Forlæng opslaget: ${input.extendUrl}`,
       done,
-      `Se opslaget: ${SITE_URL}/genstande/${input.itemId}`,
+      `${doneLabel}: ${doneLink}`,
     ].join("\n\n"),
     html: mailHtml(
       `<p style="margin-top:0;">${escapeHtml(greeting(input.fullName))},</p>
 <p>${escapeHtml(intro)}</p>
 <p>${escapeHtml(ask)}</p>
 ${mailButton(input.extendUrl, `Forlæng i ${ITEM_LIFETIME_MONTHS} måneder`)}
-<p style="font-size:13px;color:#71717a;">${escapeHtml(done)} <a href="${SITE_URL}/genstande/${input.itemId}" style="color:#71717a;">Se opslaget</a>.</p>`,
+<p style="font-size:13px;color:#71717a;">${escapeHtml(done)} <a href="${escapeHtml(doneLink)}" style="color:#71717a;">${doneLabel}</a>.</p>`,
+    ),
+  };
+}
+
+export function itemDeletedMail(input: { fullName: string; itemTitle: string; hasAccount: boolean }): Mail {
+  const intro = `Dit opslag "${input.itemTitle}" er slettet. Det er fjernet fra Hittegodscentralen sammen med billeder og beskeder om det.`;
+  const notYou = input.hasAccount
+    ? "Har du ikke selv slettet opslaget, så skriv til os med det samme og skift din adgangskode."
+    : "Har du ikke selv slettet opslaget, så skriv til os med det samme.";
+  return {
+    subject: `Dit opslag "${input.itemTitle}" er slettet`,
+    text: [
+      `${greeting(input.fullName)},`,
+      intro,
+      `Mangler du stadig noget, eller har du fundet noget nyt, kan du oprette et nyt opslag: ${SITE_URL}/opret`,
+      `${notYou} ${SITE_URL}/kontakt`,
+    ].join("\n\n"),
+    html: mailHtml(
+      `<p style="margin-top:0;">${escapeHtml(greeting(input.fullName))},</p>
+<p>${escapeHtml(intro)}</p>
+<p>Mangler du stadig noget, eller har du fundet noget nyt, kan du altid oprette et nyt opslag.</p>
+${mailButton(`${SITE_URL}/opret`, "Opret et nyt opslag")}
+<p style="font-size:13px;color:#71717a;">${escapeHtml(notYou)} <a href="${SITE_URL}/kontakt" style="color:#71717a;">Kontakt os</a>.</p>`,
+    ),
+  };
+}
+
+export function itemExpiredMail(input: {
+  fullName: string;
+  itemTitle: string;
+  extendUrl: string;
+}): Mail {
+  const intro = `Dit opslag "${input.itemTitle}" er udløbet og vises ikke længere på Hittegodscentralen.`;
+  const ask = `Leder du stadig, eller har du stadig genstanden? Så kan du sætte opslaget op igen i ${ITEM_LIFETIME_MONTHS} måneder.`;
+  const done = "Er genstanden kommet hjem, behøver du ikke gøre noget.";
+  return {
+    subject: `Dit opslag "${input.itemTitle}" er udløbet`,
+    text: [`${greeting(input.fullName)},`, intro, ask, `Sæt opslaget op igen: ${input.extendUrl}`, done].join("\n\n"),
+    html: mailHtml(
+      `<p style="margin-top:0;">${escapeHtml(greeting(input.fullName))},</p>
+<p>${escapeHtml(intro)}</p>
+<p>${escapeHtml(ask)}</p>
+${mailButton(input.extendUrl, "Sæt opslaget op igen")}
+<p style="font-size:13px;color:#71717a;">${done}</p>`,
+    ),
+  };
+}
+
+// Copy to whoever wrote, so they know it went through and have what they wrote.
+export function senderReceiptMail(input: {
+  name: string;
+  message: string;
+  item?: { title: string; type: ItemType };
+}): Mail {
+  const who = input.item?.type === "found" ? "finderen" : "taberen";
+  const intro = input.item
+    ? `Din besked om "${input.item.title}" er sendt videre til ${who}. Vi har ikke givet dig ${who}s e-mail, og ${who} har fået din. Svarer ${who}, kommer svaret direkte til denne e-mail.`
+    : "Tak for din henvendelse. Vi har modtaget den og svarer så hurtigt, vi kan.";
+  const subject = input.item ? `Din besked om "${input.item.title}" er sendt` : "Vi har modtaget din henvendelse";
+  return {
+    subject,
+    text: [`${greeting(input.name)},`, intro, "Din besked:", input.message].join("\n\n"),
+    html: mailHtml(
+      `<p style="margin-top:0;">${escapeHtml(greeting(input.name))},</p>
+<p>${escapeHtml(intro)}</p>
+<p style="margin-bottom:0;font-size:13px;color:#71717a;">Din besked:</p>
+${htmlQuote(input.message)}`,
+    ),
+  };
+}
+
+export type ItemClosedReason = "resolved" | "deleted" | "account_deleted";
+
+// To the other person in a conversation, when the item it was about is closed or removed.
+export function itemClosedMail(input: {
+  recipientName: string;
+  itemTitle: string;
+  reason: ItemClosedReason;
+  conversationId: string;
+}): Mail {
+  const text = {
+    resolved: `Opslaget "${input.itemTitle}", som I har skrevet sammen om, er markeret som løst af den, der oprettede det. Tak, hvis du var med til at få tingen hjem!`,
+    deleted: `Opslaget "${input.itemTitle}", som I har skrevet sammen om, er slettet af den, der oprettede det. Jeres samtale er slettet sammen med opslaget.`,
+    account_deleted: `Den bruger, du har skrevet med om "${input.itemTitle}", har slettet sin konto. Jeres samtale er derfor slettet.`,
+  }[input.reason];
+  const subject = {
+    resolved: `"${input.itemTitle}" er markeret som løst`,
+    deleted: `Opslaget "${input.itemTitle}" er slettet`,
+    account_deleted: `Samtalen om "${input.itemTitle}" er slettet`,
+  }[input.reason];
+  const button =
+    input.reason === "resolved"
+      ? mailButton(inboxUrl(input.conversationId), "Se samtalen")
+      : mailButton(`${SITE_URL}/genstande`, "Se andre opslag");
+  return {
+    subject,
+    text: `${greeting(input.recipientName)},\n\n${text}`,
+    html: mailHtml(
+      `<p style="margin-top:0;">${escapeHtml(greeting(input.recipientName))},</p>
+<p>${escapeHtml(text)}</p>
+${button}`,
+    ),
+  };
+}
+
+export function passwordChangedMail(fullName: string): Mail {
+  const intro = "Adgangskoden til din konto på Hittegodscentralen er netop blevet ændret.";
+  const notYou =
+    "Var det ikke dig, så nulstil din adgangskode med det samme via \"Glemt adgangskode\", og skriv til os.";
+  return {
+    subject: "Din adgangskode er ændret",
+    text: `${greeting(fullName)},\n\n${intro}\n\nVar det dig, behøver du ikke gøre noget.\n\n${notYou} ${SITE_URL}/kontakt`,
+    html: mailHtml(
+      `<p style="margin-top:0;">${escapeHtml(greeting(fullName))},</p>
+<p>${intro} Var det dig, behøver du ikke gøre noget.</p>
+<p style="padding:12px 16px;background:#fdecea;border-radius:10px;font-size:14px;">${escapeHtml(notYou)} <a href="${SITE_URL}/kontakt" style="color:${BRAND.rust};font-weight:bold;">Kontakt os</a></p>`,
+    ),
+  };
+}
+
+export function accountDeletedMail(fullName: string): Mail {
+  const intro =
+    "Din konto på Hittegodscentralen er slettet. Dine opslag, billeder og beskeder er slettet sammen med den.";
+  const back = "Du er altid velkommen tilbage. Du kan oprette en ny konto når som helst.";
+  return {
+    subject: "Din konto er slettet",
+    text: `${greeting(fullName)},\n\n${intro}\n\n${back}\n\nHar du ikke selv slettet din konto, så skriv til os: ${SITE_URL}/kontakt`,
+    html: mailHtml(
+      `<p style="margin-top:0;">${escapeHtml(greeting(fullName))},</p>
+<p>${escapeHtml(intro)}</p>
+<p>${escapeHtml(back)}</p>
+<p style="font-size:13px;color:#71717a;">Har du ikke selv slettet din konto, så <a href="${SITE_URL}/kontakt" style="color:#71717a;">skriv til os</a>.</p>`,
     ),
   };
 }

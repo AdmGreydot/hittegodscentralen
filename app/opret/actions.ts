@@ -6,10 +6,11 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { getCurrentUser, getCurrentUserId } from "../../lib/auth";
 import { lookupPostalCode } from "../../lib/geo";
-import { itemCreatedMail } from "../../lib/emails";
-import { newExpiryDate } from "../../lib/item-expiry";
+import { itemCreatedMail, itemDeletedMail } from "../../lib/emails";
+import { manageUrl, newExpiryDate } from "../../lib/item-expiry";
+import { getConversationPartners, notifyConversationPartners } from "../../lib/notifications";
 import { sendMail } from "../../lib/mail";
-import type { ItemResolution } from "../../lib/item-card";
+import { isResolutionFor, type ItemResolution } from "../../lib/item-card";
 import { createAdminClient } from "../../lib/supabase/admin";
 import {
   EMPTY_DRAFT,
@@ -196,6 +197,7 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
       itemTitle: draft.title,
       itemType: draft.type,
       hasAccount: Boolean(user),
+      manageUrl: user ? undefined : manageUrl(item.id),
     });
     after(() => sendMail({ to: confirmTo, ...mail }));
   }
@@ -254,11 +256,18 @@ export async function updateItem(itemId: string, form: FormData): Promise<Create
   redirect(`/genstande/${itemId}`);
 }
 
-// Deletes one of the user's own items with its images.
+// Deletes one of the user's own items with its images, and confirms it by mail.
 export async function deleteItem(itemId: string): Promise<{ error?: string }> {
   const supabase = createAdminClient();
   const owned = await ownedItem(supabase, itemId);
   if (!owned) return { error: "Du kan kun slette dine egne opslag." };
+
+  // Read before deleting: the title goes in the confirmation mail, and the people the poster
+  // has written with are told, since their conversations are deleted with the item.
+  const [{ data: item }, partners] = await Promise.all([
+    supabase.from("items").select("title").eq("id", itemId).single<{ title: string }>(),
+    getConversationPartners({ itemIds: [itemId] }),
+  ]);
 
   await removeImages(supabase, owned.images);
   const { error } = await supabase.from("items").delete().eq("id", itemId).eq("user_id", owned.userId);
@@ -267,15 +276,16 @@ export async function deleteItem(itemId: string): Promise<{ error?: string }> {
     return { error: "Opslaget kunne ikke slettes. Prøv igen om lidt." };
   }
 
+  const user = await getCurrentUser();
+  if (user?.email && item) {
+    const mail = itemDeletedMail({ fullName: user.fullName, itemTitle: item.title, hasAccount: true });
+    after(() => sendMail({ to: user.email, ...mail }));
+  }
+  after(() => notifyConversationPartners(partners, "deleted"));
+
   refresh();
   return {};
 }
-
-// Which answers fit which kind of item. gave_up archives the item; the rest mark it resolved.
-const RESOLUTIONS: Record<"lost" | "found", ItemResolution[]> = {
-  lost: ["returned", "found_self", "gave_up"],
-  found: ["returned", "police", "other"],
-};
 
 const MAX_NOTE_LENGTH = 500;
 
@@ -294,7 +304,7 @@ export async function resolveItem(
     .select("type")
     .eq("id", itemId)
     .single<{ type: "lost" | "found" }>();
-  if (!item || !RESOLUTIONS[item.type].includes(input.resolution)) {
+  if (!item || !isResolutionFor(item.type, input.resolution)) {
     return { error: "Vælg hvordan det endte." };
   }
 
@@ -330,6 +340,13 @@ export async function resolveItem(
   if (error) {
     console.error("resolveItem failed", error);
     return { error: "Opslaget kunne ikke opdateres. Prøv igen om lidt." };
+  }
+
+  // Tell the people the poster wrote with. Not when they gave up: nothing to thank anyone for.
+  if (input.resolution !== "gave_up") {
+    after(async () =>
+      notifyConversationPartners(await getConversationPartners({ itemIds: [itemId] }), "resolved"),
+    );
   }
 
   refresh();

@@ -6,6 +6,24 @@ export type ItemStatus = "active" | "resolved" | "archived";
 // How an item ended when its poster marked it as done. See the item_resolution enum.
 export type ItemResolution = "returned" | "found_self" | "gave_up" | "police" | "other";
 
+// Which answers fit which kind of item. gave_up archives the item; the rest mark it resolved.
+export const RESOLUTION_OPTIONS: Record<ItemType, { value: ItemResolution; label: string }[]> = {
+  lost: [
+    { value: "returned", label: "Ja, jeg har fået den igen" },
+    { value: "found_self", label: "Ja, jeg fandt den selv" },
+    { value: "gave_up", label: "Nej, jeg har opgivet at finde den" },
+  ],
+  found: [
+    { value: "returned", label: "Ejeren har fået den" },
+    { value: "police", label: "Afleveret til politiet eller et hittegodskontor" },
+    { value: "other", label: "Andet" },
+  ],
+};
+
+export function isResolutionFor(type: ItemType, resolution: ItemResolution) {
+  return RESOLUTION_OPTIONS[type].some((o) => o.value === resolution);
+}
+
 export type ItemCard = {
   id: string;
   type: ItemType;

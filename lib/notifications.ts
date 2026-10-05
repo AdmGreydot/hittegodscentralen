@@ -1,6 +1,14 @@
 import "server-only";
-import { itemExpiringMail, newMessageMail, unreadReminderMail, type UnreadConversation } from "./emails";
-import { EXPIRY_WARNING_DAYS, extendUrl } from "./item-expiry";
+import {
+  itemClosedMail,
+  itemExpiredMail,
+  itemExpiringMail,
+  newMessageMail,
+  unreadReminderMail,
+  type ItemClosedReason,
+  type UnreadConversation,
+} from "./emails";
+import { EXPIRY_WARNING_DAYS, extendUrl, manageUrl } from "./item-expiry";
 import { sendMail } from "./mail";
 import { createAdminClient } from "./supabase/admin";
 
@@ -190,6 +198,7 @@ export async function processItemExpiry() {
           expiresAt: item.expires_at,
           extendUrl: extendUrl(item.id, item.expires_at),
           hasAccount: Boolean(item.user_id),
+          manageUrl: item.user_id ? undefined : manageUrl(item.id),
         }),
       });
       // Not sent: leave it unmarked so tomorrow's run tries again.
@@ -205,8 +214,75 @@ export async function processItemExpiry() {
     .update({ status: "archived" })
     .eq("status", "active")
     .lte("expires_at", now.toISOString())
-    .select("id");
+    .select("id, title, expires_at, user_id, contact_email")
+    .returns<ExpiringRow[]>();
   if (archiveError) throw archiveError;
 
+  for (const item of archived) {
+    const recipient = item.user_id
+      ? await getRecipient(supabase, item.user_id)
+      : item.contact_email
+        ? { email: item.contact_email, fullName: "" }
+        : null;
+    if (!recipient) continue;
+    await sendMail({
+      to: recipient.email,
+      ...itemExpiredMail({
+        fullName: recipient.fullName,
+        itemTitle: item.title,
+        extendUrl: extendUrl(item.id, item.expires_at),
+      }),
+    });
+  }
+
   return { warned, archived: archived.length };
+}
+
+export type ItemParticipant = { email: string; fullName: string; itemTitle: string; conversationId: string };
+
+// The other person in each conversation about these items, or (with `userId`) in each of that
+// user's conversations. Read before deleting, since the conversations go with the item/user.
+export async function getConversationPartners(
+  filter: { itemIds: string[] } | { userId: string },
+): Promise<ItemParticipant[]> {
+  const supabase = createAdminClient();
+  let query = supabase
+    .from("conversations")
+    .select("id, owner_id, starter_id, items!conversations_item_id_fkey(title)");
+  query =
+    "itemIds" in filter
+      ? query.in("item_id", filter.itemIds)
+      : query.or(`owner_id.eq.${filter.userId},starter_id.eq.${filter.userId}`);
+  const { data, error } = await query.returns<
+    { id: string; owner_id: string; starter_id: string; items: { title: string } | null }[]
+  >();
+  if (error) {
+    console.error("getConversationPartners failed", error);
+    return [];
+  }
+
+  const partners: ItemParticipant[] = [];
+  for (const c of data) {
+    // Item filter: the poster is the one acting, so tell the starter. User filter: the other one.
+    const otherId = "userId" in filter && c.starter_id === filter.userId ? c.owner_id : c.starter_id;
+    const recipient = await getRecipient(supabase, otherId);
+    if (recipient) {
+      partners.push({ ...recipient, itemTitle: c.items?.title ?? "en genstand", conversationId: c.id });
+    }
+  }
+  return partners;
+}
+
+export async function notifyConversationPartners(partners: ItemParticipant[], reason: ItemClosedReason) {
+  for (const p of partners) {
+    await sendMail({
+      to: p.email,
+      ...itemClosedMail({
+        recipientName: p.fullName,
+        itemTitle: p.itemTitle,
+        reason,
+        conversationId: p.conversationId,
+      }),
+    });
+  }
 }

@@ -3,8 +3,17 @@
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { confirmEmailMail, resetPasswordMail } from "../../lib/emails";
+import { after } from "next/server";
+import { getCurrentUser } from "../../lib/auth";
+import {
+  accountDeletedMail,
+  confirmEmailMail,
+  passwordChangedMail,
+  resetPasswordMail,
+} from "../../lib/emails";
+import { removeItemImageFiles } from "../../lib/item-images";
 import { sendMail, withinRateLimit } from "../../lib/mail";
+import { getConversationPartners, notifyConversationPartners } from "../../lib/notifications";
 import { createAdminClient } from "../../lib/supabase/admin";
 import { createClient } from "../../lib/supabase/server";
 import {
@@ -148,7 +157,7 @@ export async function updatePassword(form: FormData): Promise<AuthResult> {
     return { message: "Linket er udløbet. Bed om et nyt link til at nulstille din adgangskode." };
   }
 
-  const { error } = await supabase.auth.updateUser({ password });
+  const { data: updated, error } = await supabase.auth.updateUser({ password });
   if (error) {
     if (error.code === "same_password") {
       return { errors: { password: "Vælg en anden adgangskode end den, du havde før." } };
@@ -160,7 +169,44 @@ export async function updatePassword(form: FormData): Promise<AuthResult> {
     return { message: "Adgangskoden kunne ikke gemmes. Prøv igen om lidt." };
   }
 
+  // Tell the owner, so they notice if someone else changed it.
+  const email = updated.user.email;
+  if (email) {
+    const fullName = updated.user.user_metadata?.full_name;
+    const mail = passwordChangedMail(typeof fullName === "string" ? fullName : "");
+    after(() => sendMail({ to: email, ...mail }));
+  }
+
   redirect("/profil");
+}
+
+// Deletes the logged-in user's account. Their profile, items, conversations and messages go with
+// it (on delete cascade); image files are removed first. People they wrote with are told why
+// the conversation disappeared, and the user gets a confirmation.
+export async function deleteAccount(): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Du er blevet logget ud. Log ind igen for at slette din konto." };
+
+  const admin = createAdminClient();
+  const [{ data: items }, partners] = await Promise.all([
+    admin.from("items").select("id").eq("user_id", user.id).returns<{ id: string }[]>(),
+    getConversationPartners({ userId: user.id }),
+  ]);
+  await removeItemImageFiles(admin, (items ?? []).map((i) => i.id));
+
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+  if (error) {
+    console.error("deleteAccount failed", error);
+    return { error: "Kontoen kunne ikke slettes. Prøv igen om lidt, eller skriv til os." };
+  }
+
+  // The user no longer exists; just clear the session cookies in this browser.
+  await (await createClient()).auth.signOut({ scope: "local" });
+  after(async () => {
+    await sendMail({ to: user.email, ...accountDeletedMail(user.fullName) });
+    await notifyConversationPartners(partners, "account_deleted");
+  });
+  redirect("/konto-slettet");
 }
 
 export async function logOut() {

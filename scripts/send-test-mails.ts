@@ -1,9 +1,15 @@
 // Sends one of every e-mail the site sends, with sample data, so they can be checked in a real
 // inbox. Run: npm run mail:test -- you@example.com
 import {
+  accountDeletedMail,
+  itemClosedMail,
+  itemExpiredMail,
+  passwordChangedMail,
+  senderReceiptMail,
   confirmEmailMail,
   contactFormMail,
   itemCreatedMail,
+  itemDeletedMail,
   itemExpiringMail,
   itemRelayMail,
   newMessageMail,
@@ -22,6 +28,7 @@ if (!to || !to.includes("@")) {
 const NAME = "Morten Kirch Pedersen";
 const ITEM_ID = "00000000-0000-0000-0000-000000000000";
 const CONVERSATION_ID = "00000000-0000-0000-0000-000000000001";
+const MANAGE_URL = `${SITE_URL}/genstande/${ITEM_ID}/administrer?token=test`;
 const sender = {
   name: "Ilona Taran",
   email: "ilona@example.com",
@@ -35,14 +42,23 @@ const mails: [string, Mail][] = [
   ["Nulstil adgangskode", resetPasswordMail(NAME, `${SITE_URL}/auth/confirm?token_hash=test&type=recovery&next=/nulstil-adgangskode`)],
   ["Ny besked", newMessageMail({ recipientName: NAME, senderName: sender.name, itemTitle: "JBL højtaler", body: sender.message, conversationId: CONVERSATION_ID })],
   ["Opslag oprettet (med profil)", itemCreatedMail({ fullName: NAME, itemId: ITEM_ID, itemTitle: "JBL højtaler", itemType: "lost", hasAccount: true })],
-  ["Opslag oprettet (uden profil)", itemCreatedMail({ fullName: "", itemId: ITEM_ID, itemTitle: "Sort iPhone 14 Pro", itemType: "found", hasAccount: false })],
+  ["Opslag oprettet (uden profil)", itemCreatedMail({ fullName: "", itemId: ITEM_ID, itemTitle: "Sort iPhone 14 Pro", itemType: "found", hasAccount: false, manageUrl: MANAGE_URL })],
   ["Ulæst påmindelse", unreadReminderMail(NAME, [
     { conversationId: CONVERSATION_ID, senderName: sender.name, itemTitle: "JBL højtaler", messages: ["Hej, er den stadig væk?", "Jeg kan aflevere den i morgen.", "Skriv gerne, hvornår det passer dig.", sender.message] },
     { conversationId: CONVERSATION_ID, senderName: "Jens Hansen", itemTitle: "Blå rygsæk", messages: ["Er det din rygsæk med klistermærker på?"] },
   ])],
   ["Opslag udløber snart", itemExpiringMail({ fullName: NAME, itemId: ITEM_ID, itemTitle: "JBL højtaler", expiresAt: new Date(Date.now() + 14 * 864e5).toISOString(), extendUrl: `${SITE_URL}/genstande/${ITEM_ID}/forlaeng?token=test`, hasAccount: true })],
+  ["Opslag udløbet", itemExpiredMail({ fullName: NAME, itemTitle: "JBL højtaler", extendUrl: `${SITE_URL}/genstande/${ITEM_ID}/forlaeng?token=test` })],
+  ["Opslag slettet", itemDeletedMail({ fullName: NAME, itemTitle: "JBL højtaler", hasAccount: true })],
+  ["Kvittering: besked til opslag", senderReceiptMail({ name: sender.name, message: sender.message, item: { title: "Sort iPhone 14 Pro", type: "found" } })],
+  ["Kvittering: kontaktformular", senderReceiptMail({ name: sender.name, message: sender.message })],
+  ["Modpart: opslag løst", itemClosedMail({ recipientName: sender.name, itemTitle: "JBL højtaler", reason: "resolved", conversationId: CONVERSATION_ID })],
+  ["Modpart: opslag slettet", itemClosedMail({ recipientName: sender.name, itemTitle: "JBL højtaler", reason: "deleted", conversationId: CONVERSATION_ID })],
+  ["Modpart: konto slettet", itemClosedMail({ recipientName: sender.name, itemTitle: "JBL højtaler", reason: "account_deleted", conversationId: CONVERSATION_ID })],
+  ["Adgangskode ændret", passwordChangedMail(NAME)],
+  ["Konto slettet", accountDeletedMail(NAME)],
   ["Kontaktformular", contactFormMail(sender)],
-  ["Besked til bruger uden profil", itemRelayMail({ sender, itemId: ITEM_ID, itemTitle: "Sort iPhone 14 Pro", itemType: "found" })],
+  ["Besked til bruger uden profil", itemRelayMail({ sender, itemId: ITEM_ID, itemTitle: "Sort iPhone 14 Pro", itemType: "found", manageUrl: MANAGE_URL })],
 ];
 
 async function main() {
