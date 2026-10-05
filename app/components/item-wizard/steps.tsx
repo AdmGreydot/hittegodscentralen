@@ -23,7 +23,7 @@ import {
   type ItemDraft,
 } from "./draft";
 import { Field, Select, StepHeading, TextArea, TextInput } from "./fields";
-import { resizeImage } from "./resizeImage";
+import { isHeicFile, resizeImage } from "./resizeImage";
 
 type StepProps = {
   draft: ItemDraft;
@@ -175,13 +175,13 @@ function ImagePicker({
 
   async function choose(file: File | undefined) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) return setLocalError("Vælg en billedfil.");
+    if (!file.type.startsWith("image/") && !isHeicFile(file)) return setLocalError("Vælg en billedfil.");
     if (file.size > MAX_IMAGE_BYTES) return setLocalError("Billedet må højst fylde 10 MB.");
     setLocalError(null);
     setProcessing(true);
     const resized = await resizeImage(file);
     setProcessing(false);
-    if (!resized) return setLocalError("Billedformatet understøttes ikke. Prøv JPG eller PNG.");
+    if (!resized) return setLocalError("Billedet kunne ikke læses. Prøv et andet billede, fx JPG, PNG eller HEIC.");
     // Preview URL is made here, in the event, and released when replaced or removed.
     if (draft.imagePreview) URL.revokeObjectURL(draft.imagePreview);
     update({ image: resized, imagePreview: URL.createObjectURL(resized) });
@@ -230,7 +230,7 @@ function ImagePicker({
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.heic,.heif"
             className="sr-only"
             onChange={(e) => choose(e.target.files?.[0])}
           />
