@@ -123,3 +123,13 @@ export async function withinRateLimit(kind: MailKind, key?: string) {
   await supabase.from("mail_log").insert({ kind, key_hash: keyHash });
   return true;
 }
+
+// How long rate-limit entries are kept. The limits only look back an hour; the rest is margin.
+const MAIL_LOG_DAYS = 7;
+
+// Deletes old rate-limit entries (privatlivspolitikken promises this). Run daily by the cron route.
+export async function pruneMailLog() {
+  const before = new Date(Date.now() - MAIL_LOG_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await createAdminClient().from("mail_log").delete().lt("created_at", before);
+  if (error) throw error;
+}
