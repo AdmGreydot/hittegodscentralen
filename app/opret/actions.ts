@@ -3,7 +3,12 @@
 import { randomUUID } from "node:crypto";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCurrentUserId } from "../../lib/auth";
+import { after } from "next/server";
+import { getCurrentUser, getCurrentUserId } from "../../lib/auth";
+import { lookupPostalCode } from "../../lib/geo";
+import { itemCreatedMail } from "../../lib/emails";
+import { newExpiryDate } from "../../lib/item-expiry";
+import { sendMail } from "../../lib/mail";
 import type { ItemResolution } from "../../lib/item-card";
 import { createAdminClient } from "../../lib/supabase/admin";
 import {
@@ -16,7 +21,7 @@ import {
   type ItemDraft,
 } from "../components/item-wizard/draft";
 
-// Rough bounding box around Denmark incl. Bornholm — anything outside is ignored.
+// Rough bounding box around Denmark incl. Bornholm. Anything outside is ignored.
 function pointInDenmark(form: FormData) {
   const latitude = Number(text(form, "latitude"));
   const longitude = Number(text(form, "longitude"));
@@ -39,31 +44,6 @@ const IMAGE_TYPES: Record<string, string> = {
 function text(form: FormData, key: string) {
   const value = form.get(key);
   return typeof value === "string" ? value.trim() : "";
-}
-
-// Municipality and an approximate centre point for a Danish postal code, via DAWA.
-// Used by the filters on /genstande. Failing to look it up is not fatal.
-async function lookupPostalCode(postalCode: string) {
-  if (!postalCode) return null;
-  try {
-    const res = await fetch(`https://api.dataforsyningen.dk/postnumre/${postalCode}`, {
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      navn: string;
-      kommuner: { navn: string }[];
-      visueltcenter: [number, number] | null;
-    };
-    return {
-      city: data.navn,
-      municipality: data.kommuner[0]?.navn ?? null,
-      longitude: data.visueltcenter?.[0] ?? null,
-      latitude: data.visueltcenter?.[1] ?? null,
-    };
-  } catch {
-    return null;
-  }
 }
 
 // The wizard's fields from the form, checked the same way as in the browser.
@@ -109,13 +89,14 @@ async function itemFields(form: FormData, draft: ItemDraft, categoryId: number) 
     title: draft.title,
     description: draft.description,
     region: draft.region,
-    city: draft.city || place?.city || null,
+    city: draft.city || null,
     postal_code: draft.postalCode || null,
     address: draft.address || null,
     municipality: place?.municipality ?? null,
     // Exact point from "Brug min placering" when given, else the postal code's centre.
     latitude: point?.latitude ?? place?.latitude ?? null,
     longitude: point?.longitude ?? place?.longitude ?? null,
+    location_exact: Boolean(point),
     // Noon UTC is the same calendar day in Denmark all year round.
     occurred_at: `${draft.occurredOn}T12:00:00Z`,
   };
@@ -174,7 +155,8 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
   // Honeypot filled in: a bot. Act as if it worked, without saving anything.
   if (text(form, HONEYPOT_FIELD)) redirect("/genstande");
 
-  const userId = await getCurrentUserId();
+  const user = await getCurrentUser();
+  const userId = user?.id ?? null;
   const { draft, errors, file } = readDraft(form, Boolean(userId));
   if (Object.keys(errors).length) return { errors };
 
@@ -191,6 +173,7 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
       user_id: userId,
       // Only stored when there's no user; otherwise contact goes through the account.
       contact_email: userId ? null : draft.email,
+      expires_at: newExpiryDate(),
     })
     .select("id")
     .single();
@@ -203,6 +186,18 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
     // Don't leave a half-created item behind.
     await supabase.from("items").delete().eq("id", item.id);
     return { message: "Billedet kunne ikke gemmes. Prøv igen, eller opret uden billede." };
+  }
+
+  const confirmTo = user?.email || draft.email;
+  if (confirmTo && draft.type) {
+    const mail = itemCreatedMail({
+      fullName: user?.fullName ?? "",
+      itemId: item.id,
+      itemTitle: draft.title,
+      itemType: draft.type,
+      hasAccount: Boolean(user),
+    });
+    after(() => sendMail({ to: confirmTo, ...mail }));
   }
 
   redirect(`/genstande/${item.id}?oprettet=1`);
@@ -341,7 +336,8 @@ export async function resolveItem(
   return {};
 }
 
-// Puts a resolved or archived item back up, e.g. if it was marked by mistake.
+// Puts a resolved, archived or expired item back up, e.g. if it was marked by mistake. It gets a
+// fresh expiry period.
 export async function reopenItem(itemId: string): Promise<{ error?: string }> {
   const supabase = createAdminClient();
   const owned = await ownedItem(supabase, itemId);
@@ -349,7 +345,14 @@ export async function reopenItem(itemId: string): Promise<{ error?: string }> {
 
   const { error } = await supabase
     .from("items")
-    .update({ status: "active", resolution: null, resolved_conversation_id: null, status_note: null })
+    .update({
+      status: "active",
+      resolution: null,
+      resolved_conversation_id: null,
+      status_note: null,
+      expires_at: newExpiryDate(),
+      expiry_warned_at: null,
+    })
     .eq("id", itemId)
     .eq("user_id", owned.userId);
   if (error) {

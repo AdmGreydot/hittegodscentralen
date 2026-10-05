@@ -190,6 +190,19 @@ export default function ItemWizard({
             {step === 2 && <LocationStep draft={draft} errors={errors} update={update} />}
             {step === 3 && <ContactStep draft={draft} errors={errors} update={update} />}
             {step === 4 && <ReviewStep draft={draft} categories={categories} />}
+            {step === 4 && mode === "create" && (
+              <p className="mt-6 text-sm text-zinc-500">
+                Ved at oprette opslaget accepterer du vores{" "}
+                <Link
+                  href="/vilkaar-og-betingelser"
+                  target="_blank"
+                  className="font-medium text-brand-rust underline underline-offset-4"
+                >
+                  vilkår og betingelser
+                </Link>
+                .
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-3 border-t border-zinc-200 bg-zinc-50 px-6 py-5 sm:px-8">

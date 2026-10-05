@@ -37,8 +37,9 @@ export default async function EditItemPage({ params }: PageProps<"/genstande/[id
         postalCode: item.postalCode ?? "",
         address: item.address ?? "",
         occurredOn: dayFormat.format(new Date(item.occurredAt)),
-        latitude: item.latitude,
-        longitude: item.longitude,
+        // Only an exact spot is kept. A postal code's centre is worked out again on save.
+        latitude: item.locationExact ? item.latitude : null,
+        longitude: item.locationExact ? item.longitude : null,
       }}
     />
   );

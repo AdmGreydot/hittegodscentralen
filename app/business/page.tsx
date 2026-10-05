@@ -14,10 +14,10 @@ import {
 export const metadata: Metadata = {
   title: "Business · Hittegodscentralen",
   description:
-    "Hittegodscentralen for virksomheder og organisationer — kommer snart.",
+    "Hittegodscentralen for virksomheder og organisationer. Kommer snart.",
 };
 
-const CONTACT_EMAIL = "hittegodscentralen@greydot.dk";
+const CONTACT_EMAIL = "info@hittegodscentralen.dk";
 
 const ORGANISATIONS: { icon: LucideIcon; label: string }[] = [
   { icon: School, label: "Skoler" },

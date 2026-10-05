@@ -9,7 +9,7 @@ alter table public.items
   add constraint items_owner_or_email
   check (user_id is not null or contact_email is not null);
 
--- contact_email må aldrig kunne læses via API'et — kontakt formidles gennem Hittegodscentralen.
+-- contact_email må aldrig kunne læses via API'et. Kontakt formidles gennem Hittegodscentralen.
 -- Læseadgang gives derfor kolonne for kolonne i stedet for til hele tabellen.
 -- NB: nye kolonner på items skal tilføjes her, før de kan læses.
 revoke select on public.items from anon, authenticated;

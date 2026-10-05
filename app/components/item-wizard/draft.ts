@@ -40,7 +40,7 @@ export const EMPTY_DRAFT: ItemDraft = {
 
 export const STEPS = ["Type", "Detaljer", "Lokation", "Kontakt", "Gennemse"] as const;
 
-// The contact step. Skipped when logged in — then contact goes through the account.
+// The contact step. Skipped when logged in, since contact then goes through the account.
 export const CONTACT_STEP = 3;
 
 // Indexes of the steps shown, in order.

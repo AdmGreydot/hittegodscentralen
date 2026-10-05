@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
-import { Info, Loader2, Lock, LogIn, Mail, Send, UserPlus } from "lucide-react";
+import { CircleCheck, Info, Loader2, Lock, LogIn, Mail, Send, UserPlus } from "lucide-react";
 import { initials } from "../../../../lib/initials";
 import type { ItemType } from "../../../../lib/item-card";
 import { useAuthModal } from "../../../components/auth/AuthModal";
+import { sendItemMail } from "../../../mail/actions";
 import { startConversation } from "../../../profil/actions";
 
 // chat:  the poster has an account and the viewer is logged in
 // login: the poster has an account, but the viewer must log in to write to them
-// mail:  the poster has no account — the viewer sends an e-mail relayed through Hittegodscentralen
+// mail:  the poster has no account; the viewer sends an e-mail relayed through Hittegodscentralen
 // own:   the viewer is the poster
 export type ContactMode = "chat" | "login" | "mail" | "own";
 
@@ -37,7 +38,7 @@ type Role = (typeof ROLE)[ItemType];
 function subtitle(mode: ContactMode, role: Role) {
   switch (mode) {
     case "chat":
-      return `Skriv direkte til ${role.the} via chat — din besked er privat.`;
+      return `Skriv direkte til ${role.the} via chat. Din besked er privat.`;
     case "login":
       return `Du skal være logget ind for at skrive til ${role.the}.`;
     case "mail":
@@ -85,7 +86,7 @@ export default function ContactCard({
           <LoginPrompt owner={owner} role={role} />
         )}
         {mode === "mail" && (
-          <MailForm role={role} placeholder={copy.placeholder} />
+          <MailForm role={role} placeholder={copy.placeholder} itemId={itemId} />
         )}
         {mode === "own" && (
           <p className="flex gap-3 rounded-xl bg-zinc-100 p-4 text-sm text-zinc-600">
@@ -214,9 +215,32 @@ function LoginPrompt({ owner, role }: { owner: Owner; role: Role }) {
   );
 }
 
-function MailForm({ role, placeholder }: { role: Role; placeholder: string }) {
+function MailForm({
+  role,
+  placeholder,
+  itemId,
+}: {
+  role: Role;
+  placeholder: string;
+  itemId: string;
+}) {
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const [sending, startSending] = useTransition();
+  if (sent) {
+    return (
+      <div className="flex flex-col items-center rounded-xl bg-brand-green/10 px-6 py-8 text-center">
+        <CircleCheck size={28} className="text-brand-green" aria-hidden />
+        <p className="mt-3 font-medium text-brand-black">Din besked er sendt</p>
+        <p className="mt-1 max-w-xs text-sm text-zinc-500">
+          Vi har sendt den videre til {role.the}. Svarer {role.the}, får du
+          svaret direkte på din e-mail.
+        </p>
+      </div>
+    );
+  }
+
   const input =
     "h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-brand-black placeholder:text-zinc-400 outline-none transition-colors focus:border-brand-brown/40 focus:bg-white";
 
@@ -225,14 +249,13 @@ function MailForm({ role, placeholder }: { role: Role; placeholder: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
-        // Honeypot filled in: almost certainly a bot. Pretend it worked so it doesn't retry.
-        if (form.get(HONEYPOT_FIELD)) {
-          setNotice("Tak! Din besked er sendt.");
-          return;
-        }
-        // TODO: relay the e-mail through Hittegodscentralen (Resend) once the backend exists.
-        // The server must check the honeypot too — bots often post directly without this page.
-        setNotice("E-mails kan ikke sendes endnu — funktionen er på vej.");
+        form.set("message", message);
+        startSending(async () => {
+          // The server checks the honeypot and looks up the poster's e-mail.
+          const result = await sendItemMail(itemId, form);
+          if (result.sent) setSent(true);
+          else setNotice(result.message ?? Object.values(result.errors ?? {})[0] ?? null);
+        });
       }}
     >
       {/* Honeypot: hidden from people and screen readers, but bots filling every field will fill it.
@@ -292,8 +315,14 @@ function MailForm({ role, placeholder }: { role: Role; placeholder: string }) {
       />
 
       <SubmitButton
-        disabled={!message.trim()}
-        icon={<Mail size={18} aria-hidden />}
+        disabled={!message.trim() || sending}
+        icon={
+          sending ? (
+            <Loader2 size={18} className="animate-spin" aria-hidden />
+          ) : (
+            <Mail size={18} aria-hidden />
+          )
+        }
       >
         Send e-mail
       </SubmitButton>

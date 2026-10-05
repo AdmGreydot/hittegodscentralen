@@ -3,6 +3,9 @@
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { confirmEmailMail, resetPasswordMail } from "../../lib/emails";
+import { sendMail, withinRateLimit } from "../../lib/mail";
+import { createAdminClient } from "../../lib/supabase/admin";
 import { createClient } from "../../lib/supabase/server";
 import {
   validatePassword,
@@ -17,7 +20,7 @@ function text(form: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-// Passwords are taken as typed — spaces can be part of them.
+// Passwords are taken as typed: spaces can be part of them.
 function raw(form: FormData, key: string) {
   const value = form.get(key);
   return typeof value === "string" ? value : "";
@@ -27,6 +30,12 @@ function raw(form: FormData, key: string) {
 async function siteOrigin() {
   const h = await headers();
   return h.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+}
+
+// Link for our own auth e-mails. Supabase only makes the token; app/auth/confirm verifies it.
+async function confirmLink(tokenHash: string, type: string, next: string) {
+  const params = new URLSearchParams({ token_hash: tokenHash, type, next });
+  return `${await siteOrigin()}/auth/confirm?${params}`;
 }
 
 export async function logIn(form: FormData): Promise<AuthResult> {
@@ -63,14 +72,17 @@ export async function signUp(form: FormData): Promise<AuthResult> {
   const errors = validateSignup(input);
   if (Object.keys(errors).length) return { errors };
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
+  if (!(await withinRateLimit("signup"))) {
+    return { message: "Du har prøvet mange gange på kort tid. Vent lidt, og prøv igen." };
+  }
+
+  // Creates the unconfirmed user and a confirmation token without Supabase sending its own mail.
+  // We send the mail ourselves, so it comes from info@ and looks like the rest.
+  const { data, error } = await createAdminClient().auth.admin.generateLink({
+    type: "signup",
     email: input.email,
     password: input.password,
-    options: {
-      data: { full_name: input.fullName },
-      emailRedirectTo: `${await siteOrigin()}/auth/callback?next=/profil`,
-    },
+    options: { data: { full_name: input.fullName } },
   });
 
   if (error) {
@@ -84,34 +96,39 @@ export async function signUp(form: FormData): Promise<AuthResult> {
     return { message: "Kontoen kunne ikke oprettes lige nu. Prøv igen om lidt." };
   }
 
-  // With e-mail confirmation on, Supabase hides existing accounts by returning a user without
-  // identities instead of an error.
-  if (data.user && data.user.identities?.length === 0) {
-    return { errors: { email: "Der findes allerede en konto med denne e-mail. Log ind i stedet." } };
+  const { hashed_token, verification_type } = data.properties;
+  const link = await confirmLink(hashed_token, verification_type, "/profil");
+  if (!(await sendMail({ to: input.email, ...confirmEmailMail(input.fullName, link) }))) {
+    return { message: "Vi kunne ikke sende bekræftelsesmailen. Prøv igen om lidt." };
   }
-
-  // No session means the e-mail must be confirmed before the user can log in.
-  if (!data.session) return { ok: true, checkEmail: true };
-
-  refresh();
-  return { ok: true };
+  // The welcome mail is sent once the e-mail is confirmed (app/auth/confirm).
+  return { ok: true, checkEmail: true };
 }
 
 export async function requestPasswordReset(form: FormData): Promise<AuthResult> {
   const email = text(form, "email").toLowerCase();
   if (!EMAIL_RE.test(email)) return { errors: { email: "Skriv en gyldig e-mailadresse." } };
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await siteOrigin()}/auth/callback?next=/nulstil-adgangskode`,
-  });
-  // Don't reveal whether the e-mail has an account — answer the same either way.
-  if (error && error.code !== "user_not_found") {
-    console.error("requestPasswordReset failed", error);
-    if (error.status === 429) {
-      return { message: "Du har bedt om for mange links. Vent lidt, og prøv igen." };
-    }
+  if (!(await withinRateLimit("reset")) || !(await withinRateLimit("reset-email", email))) {
+    return { message: "Du har bedt om for mange links. Vent lidt, og prøv igen." };
   }
+
+  const { data, error } = await createAdminClient().auth.admin.generateLink({
+    type: "recovery",
+    email,
+  });
+  // Don't reveal whether the e-mail has an account. Answer the same either way.
+  if (error) {
+    if (error.code !== "user_not_found") console.error("requestPasswordReset failed", error);
+    return { ok: true, checkEmail: true };
+  }
+
+  const fullName = data.user.user_metadata?.full_name;
+  const link = await confirmLink(data.properties.hashed_token, "recovery", "/nulstil-adgangskode");
+  await sendMail({
+    to: email,
+    ...resetPasswordMail(typeof fullName === "string" ? fullName : "", link),
+  });
   return { ok: true, checkEmail: true };
 }
 

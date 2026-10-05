@@ -208,6 +208,8 @@ export type ItemDetail = {
   region: string | null;
   latitude: number | null;
   longitude: number | null;
+  // True when the point is the exact spot; false when it's just the postal code's centre.
+  locationExact: boolean;
   occurredAt: string;
   category: { id: number; name: string } | null;
   images: { url: string; name: string | null }[];
@@ -229,6 +231,7 @@ type ItemDetailRow = {
   region: string | null;
   latitude: number | null;
   longitude: number | null;
+  location_exact: boolean;
   occurred_at: string;
   user_id: string | null; // prepared for items registered without a user account
   category: { id: number; name: string } | null;
@@ -248,7 +251,7 @@ export const getItem = cache(async (id: string): Promise<ItemDetail | null> => {
     .from("items")
     .select(
       `id, type, status, title, brand, description, address, postal_code, city, region,
-       latitude, longitude, occurred_at, user_id,
+       latitude, longitude, location_exact, occurred_at, user_id,
        category:categories(id, name),
        item_images(file_path, file_name)`,
     )
@@ -281,6 +284,7 @@ export const getItem = cache(async (id: string): Promise<ItemDetail | null> => {
     region: data.region,
     latitude: data.latitude,
     longitude: data.longitude,
+    locationExact: data.location_exact,
     occurredAt: data.occurred_at,
     category: data.category,
     images: data.item_images.map((img) => ({ url: imageUrl(img.file_path), name: img.file_name })),
@@ -314,7 +318,7 @@ export async function getSimilarItems(categoryId: number, excludeId: string, lim
   return data.map(toCard);
 }
 
-// All categories, alphabetically — for dropdowns.
+// All categories, alphabetically, for dropdowns.
 export async function getCategories() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -328,7 +332,7 @@ export async function getCategories() {
 
 export type MyItem = ItemCard & { status: ItemDetail["status"]; createdAt: string };
 
-// All of a user's own items, every status, newest first — for the profile page.
+// All of a user's own items, every status, newest first, for the profile page.
 export async function getMyItems(userId: string): Promise<MyItem[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

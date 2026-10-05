@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-// Small dark label shown on hover and keyboard focus. Purely visual — the wrapped control keeps
+// Small dark label shown on hover and keyboard focus. Purely visual: the wrapped control keeps
 // its own aria-label for screen readers. `side` is where the label appears relative to it.
 export default function Tooltip({
   label,

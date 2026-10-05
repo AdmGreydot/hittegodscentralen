@@ -13,6 +13,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { reverseGeocode } from "../../../lib/geo";
+import LazyMap, { type MapPoint } from "../map/LazyMap";
 import { formatDate, type ItemType } from "../../../lib/item-card";
 import {
   MAX_IMAGE_BYTES,
@@ -193,7 +194,7 @@ function ImagePicker({
       <p className="mb-2 text-xs font-bold uppercase tracking-wider text-brand-brown">Billede</p>
       {shown ? (
         <div className="relative aspect-[16/9] overflow-hidden rounded-xl border-2 border-dashed border-zinc-300">
-          {/* Local preview or existing Supabase image — plain img since next/image can't load blob: URLs. */}
+          {/* Local preview or existing Supabase image. Plain img since next/image can't load blob: URLs. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={shown} alt="Valgt billede" className="size-full object-cover" />
           <button
@@ -293,6 +294,31 @@ export function LocationStep({ draft, errors, update }: StepProps) {
     setMethod("manual");
     setMessage({ text, error: true });
     focusFirstField();
+  }
+
+  // Clicked the map or dragged the pin: look up that spot and fill in the fields from it.
+  async function pickOnMap({ latitude, longitude }: MapPoint) {
+    update({ latitude, longitude });
+    setMessage(null);
+    const place = await reverseGeocode(latitude, longitude);
+    if (!place) {
+      update(CLEAR_POINT);
+      setMessage({ text: "Vælg et sted i Danmark.", error: true });
+      return;
+    }
+    update({
+      region: place.region ?? "",
+      city: place.city,
+      postalCode: place.postalCode,
+      address: place.address ?? "",
+      latitude,
+      longitude,
+    });
+    setMethod("gps");
+    setMessage({
+      text: place.address ? "Stedet er sat ud fra kortet." : "Området er sat ud fra kortet. Tilføj gerne fx en station eller park.",
+      error: false,
+    });
   }
 
   function chooseGps() {
@@ -481,10 +507,22 @@ export function LocationStep({ draft, errors, update }: StepProps) {
         )}
       </Field>
 
-      {/* Map placeholder — integration comes later. */}
-      <div className="mt-6 flex h-48 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-200/50 text-zinc-400">
-        <MapPin size={28} strokeWidth={1.5} aria-hidden />
-        <span className="text-sm">Kortvisning (integration påkrævet)</span>
+      <div className="mt-6">
+        <p className="mb-2 text-sm font-medium text-brand-black">Sæt stedet på kortet</p>
+        <div className="h-64 overflow-hidden rounded-xl border border-zinc-200 sm:h-72">
+          <LazyMap
+            point={
+              draft.latitude != null && draft.longitude != null
+                ? { latitude: draft.latitude, longitude: draft.longitude }
+                : null
+            }
+            onPick={pickOnMap}
+            label="Kort. Klik for at vælge stedet"
+          />
+        </div>
+        <p className="mt-1.5 text-xs text-zinc-400">
+          Klik på kortet, eller træk nålen, for at angive stedet præcist.
+        </p>
       </div>
     </>
   );
@@ -543,7 +581,7 @@ export function ContactStep({ draft, errors, update }: StepProps) {
         <Field
           label="E-mail"
           required
-          hint="Vises ikke offentligt — vi formidler kontakten."
+          hint="Vises ikke offentligt. Vi formidler kontakten."
           error={errors.email}
         >
           {(a11y) => (

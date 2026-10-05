@@ -16,8 +16,10 @@ import {
 import { getCurrentUserId } from "../../../lib/auth";
 import { getItem, getSimilarItems, type ItemDetail } from "../../../lib/items";
 import { formatDate, PLACEHOLDER_IMAGE, type ItemCard } from "../../../lib/item-card";
+import { ITEM_LIFETIME_MONTHS } from "../../../lib/item-expiry";
 import { getConversations } from "../../../lib/messages";
 import ItemStatusControl from "../../components/item-status/ItemStatusControl";
+import LazyMap from "../../components/map/LazyMap";
 import ContactCard, { type ContactMode } from "./_components/ContactCard";
 import CreatedPopup from "./_components/CreatedPopup";
 import ImageGallery from "./_components/ImageGallery";
@@ -55,6 +57,7 @@ export default async function ItemPage({
   const query = await searchParams;
   const preview = query.preview;
   const justCreated = query.oprettet === "1";
+  const justExtended = query.forlaenget === "1";
   // Development only: ?preview=oprettet keeps the "opslag oprettet" popup on screen for styling.
   const previewCreated = process.env.NODE_ENV === "development" && preview === "oprettet";
   const mode =
@@ -112,6 +115,13 @@ export default async function ItemPage({
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         {(justCreated || previewCreated) && <CreatedPopup persistent={previewCreated} />}
 
+        {justExtended && item.status === "active" && (
+          <p role="status" className="mb-6 flex items-center gap-2 rounded-xl bg-brand-green/10 px-4 py-3 text-sm text-brand-green">
+            <Info size={16} aria-hidden />
+            Opslaget er forlænget med {ITEM_LIFETIME_MONTHS} måneder.
+          </p>
+        )}
+
         {item.status !== "active" && (
           <p className="mb-6 flex items-center gap-2 rounded-xl bg-brand-gold/20 px-4 py-3 text-sm text-brand-brown">
             <Info size={16} aria-hidden />
@@ -157,20 +167,26 @@ export default async function ItemPage({
               </dl>
             </section>
 
-            {/* Map placeholder — the real map comes later. */}
             <section className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white">
               <h2 className="flex items-center gap-2 px-6 py-4 font-medium text-brand-black">
                 <MapPin size={18} aria-hidden />
                 Lokation
-                {item.city && <span className="text-sm font-light text-zinc-400">— {item.city}</span>}
+                {item.city && <span className="text-sm font-light text-zinc-400">· {item.city}</span>}
               </h2>
               <div className="relative h-64 bg-zinc-200/60">
+                {item.latitude != null && item.longitude != null && (
+                  <LazyMap
+                    point={{ latitude: item.latitude, longitude: item.longitude }}
+                    exact={item.locationExact}
+                    label={`Kort over hvor genstanden blev ${item.type === "lost" ? "tabt" : "fundet"}`}
+                  />
+                )}
                 {mapQuery && (
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-brand-black shadow-sm transition-colors hover:border-brand-brown/40"
+                    className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-brand-black shadow-sm transition-colors hover:border-brand-brown/40"
                   >
                     Åbn i kort
                     <ExternalLink size={14} aria-hidden />

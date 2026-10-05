@@ -1,4 +1,4 @@
-// Shared by the auth forms and the server actions — keep free of server-only imports.
+// Shared by the auth forms and the server actions. Keep free of server-only imports.
 
 export type AuthField =
   | "fullName"

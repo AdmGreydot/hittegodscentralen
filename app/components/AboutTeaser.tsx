@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import HowItWorks from "./HowItWorks";
 
-// "Hvem er vi?" on the frontpage — short version of /om-os.
+// "Hvem er vi?" on the frontpage. Short version of /om-os.
 export default function AboutTeaser() {
   return (
     <section className="bg-white px-4 py-24 sm:px-6">
@@ -17,7 +17,7 @@ export default function AboutTeaser() {
           <p className="mt-6 text-lg leading-relaxed font-light text-zinc-600">
             Hvert år bliver tusindvis af genstande glemt, tabt eller efterladt.
             En telefon på en café, en jakke i skolen eller en taske i toget.
-            Ofte har nogen fundet dem — men det kan være svært at finde frem til
+            Ofte har nogen fundet dem, men det kan være svært at finde frem til
             den rette ejer.
           </p>
           <p className="mt-4 text-lg leading-relaxed font-light text-zinc-600">

@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "../../../lib/supabase/server";
 
-// Links in Supabase's auth e-mails (confirm sign-up, reset password) land here with a one-time
-// code. Swap it for a session, then continue to `next`.
+// Links in Supabase's own auth e-mails land here with a one-time code. Swap it for a session, then
+// continue to `next`. Our own e-mails (app/auth/actions.ts) use app/auth/confirm instead; this stays
+// for links sent before the switch and anything Supabase still sends itself.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");

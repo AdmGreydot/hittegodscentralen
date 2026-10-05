@@ -8,11 +8,12 @@ const LINKS = [
 ];
 
 const CONTACT = [
+  { href: "/kontakt", label: "Skriv til os" },
   { href: null, label: "J Skjoldborgs Vej 57, 8230 Åbyhøj" },
   { href: "tel:+4522984222", label: "+45 22 98 42 22" },
   {
-    href: "mailto:hittegodscentralen@greydot.dk",
-    label: "hittegodscentralen@greydot.dk",
+    href: "mailto:info@hittegodscentralen.dk",
+    label: "info@hittegodscentralen.dk",
   },
 ];
 

@@ -25,7 +25,7 @@ export default function Pagination({
   pageCount: number;
 }) {
   const { page } = filters;
-  // Keeps search, filters and page size — only the page changes.
+  // Keeps search, filters and page size. Only the page changes.
   const href = (p: number) => `/genstande${filtersToQuery({ ...filters, page: p })}`;
 
   const box = "grid h-10 min-w-10 place-items-center rounded-lg px-3 text-sm transition-colors";

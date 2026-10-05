@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
+  // The logo embedded in every e-mail (lib/mail.ts). Mails are sent from many routes.
+  outputFileTracingIncludes: {
+    "/**": ["./lib/assets/email-logo.png"],
+  },
   experimental: {
     serverActions: {
       // Creating an item uploads one photo. It's resized in the browser first (usually well under

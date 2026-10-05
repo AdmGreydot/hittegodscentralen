@@ -197,7 +197,7 @@ function SignupForm({
     return (
       <CheckEmail title="Tjek din indbakke">
         Vi har sendt dig en mail med et link. Klik på det for at bekræfte din
-        e-mail — så er din konto klar.
+        e-mail, så er din konto klar.
       </CheckEmail>
     );
   }

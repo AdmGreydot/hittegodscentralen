@@ -25,7 +25,12 @@ export default function ImageGallery({
 
   return (
     <div>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-zinc-200">
+      {/* The whole photo is shown (no cropping); the rest of the frame is white. */}
+      <div
+        className={`relative aspect-[4/3] overflow-hidden rounded-2xl ${
+          current ? "border border-zinc-200/70 bg-white" : "bg-zinc-200"
+        }`}
+      >
         {current ? (
           <Image
             src={current.url}
@@ -33,7 +38,7 @@ export default function ImageGallery({
             fill
             preload
             sizes="(min-width: 1024px) 640px, 100vw"
-            className="object-cover"
+            className="object-contain"
           />
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-3 text-zinc-400">

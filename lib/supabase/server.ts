@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 // Supabase client for Server Components, Server Actions and Route Handlers.
-// Create a new one per request — never share it between requests.
+// Create a new one per request. Never share it between requests.
 export async function createClient() {
   const cookieStore = await cookies();
 

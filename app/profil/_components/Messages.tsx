@@ -104,7 +104,7 @@ export default function Messages({
         </span>
         <h2 className="mt-5 font-serif text-2xl font-bold text-brand-brown">Ingen beskeder endnu</h2>
         <p className="mt-2 max-w-sm font-light text-zinc-500">
-          Når du skriver til nogen om en genstand — eller nogen skriver til dig — kan du se
+          Når du skriver til nogen om en genstand, eller nogen skriver til dig, kan du se
           samtalen her.
         </p>
       </div>

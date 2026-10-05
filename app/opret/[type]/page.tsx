@@ -5,7 +5,7 @@ import { getCategories } from "../../../lib/items";
 import type { ItemType } from "../../../lib/item-card";
 import ItemWizard from "../../components/item-wizard/ItemWizard";
 
-// /opret/tabt and /opret/fundet — the type was chosen on the frontpage, so the wizard skips step 1.
+// /opret/tabt and /opret/fundet. The type was chosen on the frontpage, so the wizard skips step 1.
 const TYPES: Record<string, { type: ItemType; title: string }> = {
   tabt: { type: "lost", title: "Opret tabt genstand" },
   fundet: { type: "found", title: "Opret fundet genstand" },

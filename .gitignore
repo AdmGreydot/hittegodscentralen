@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Copied from node_modules on npm install (scripts/copy-maplibre-worker.mjs)
+/public/maplibre

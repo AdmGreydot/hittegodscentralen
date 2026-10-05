@@ -1,4 +1,4 @@
-// Shared between server data fetching and client components — keep free of server-only imports.
+// Shared between server data fetching and client components. Keep free of server-only imports.
 
 export type ItemType = "lost" | "found";
 export type ItemStatus = "active" | "resolved" | "archived";

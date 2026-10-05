@@ -2,7 +2,9 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { getCurrentUserId } from "../../lib/auth";
+import { notifyNewMessage } from "../../lib/notifications";
 import { createClient } from "../../lib/supabase/server";
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -58,13 +60,16 @@ export async function startConversation(itemId: string, body: string): Promise<M
     conversation = data;
   }
 
-  const { error: messageError } = await supabase
+  const { data: message, error: messageError } = await supabase
     .from("messages")
-    .insert({ conversation_id: conversation.id, sender_id: userId, body: text });
+    .insert({ conversation_id: conversation.id, sender_id: userId, body: text })
+    .select("id")
+    .single<{ id: string }>();
   if (messageError) {
     console.error("startConversation: message failed", messageError);
     return { error: "Beskeden kunne ikke sendes. Prøv igen om lidt." };
   }
+  after(() => notifyNewMessage(message.id));
 
   redirect(`/profil?fane=beskeder&samtale=${conversation.id}`);
 }
@@ -78,13 +83,16 @@ export async function sendMessage(conversationId: string, body: string): Promise
   if (!text) return { error };
 
   const supabase = await createClient();
-  const { error: insertError } = await supabase
+  const { data: message, error: insertError } = await supabase
     .from("messages")
-    .insert({ conversation_id: conversationId, sender_id: userId, body: text });
+    .insert({ conversation_id: conversationId, sender_id: userId, body: text })
+    .select("id")
+    .single<{ id: string }>();
   if (insertError) {
     console.error("sendMessage failed", insertError);
     return { error: "Beskeden kunne ikke sendes. Prøv igen om lidt." };
   }
+  after(() => notifyNewMessage(message.id));
 
   refresh();
   return {};

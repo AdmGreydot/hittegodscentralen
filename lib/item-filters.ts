@@ -1,4 +1,4 @@
-// Filters for /genstande, stored in the URL. Shared by server and client — no server-only imports.
+// Filters for /genstande, stored in the URL. Shared by server and client, so no server-only imports.
 import type { ItemType } from "./item-card";
 
 export type ItemFilters = {

@@ -1,4 +1,4 @@
-// Shared with client components — keep free of server-only imports.
+// Shared with client components. Keep free of server-only imports.
 
 // "Anders Andersen" → "AA"
 export function initials(name: string) {

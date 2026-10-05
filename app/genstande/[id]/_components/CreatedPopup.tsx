@@ -64,7 +64,7 @@ export default function CreatedPopup({ persistent = false }: { persistent?: bool
         <EjendelsregisteretNudge className="mx-6 mb-6 sm:mx-8" />
 
         {/* Countdown bar; closes the popup when the animation ends. With reduced motion there's
-            no bar and no auto-close — the popup stays until closed. */}
+            no bar and no auto-close: the popup stays until closed. */}
         <div className="h-1 bg-zinc-100">
           <div
             onAnimationEnd={() => !persistent && setOpen(false)}

@@ -29,7 +29,7 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Don't run code between createServerClient and getClaims — it can cause
+  // Don't run code between createServerClient and getClaims. It can cause
   // users to be logged out at random.
   await supabase.auth.getClaims();
 

@@ -34,7 +34,7 @@ export default async function ProfilePage({ searchParams }: PageProps<"/profil">
   const name = profile?.full_name || user.fullName || user.email;
   const unread = conversations.reduce((sum, c) => sum + c.unread, 0);
 
-  // Conversations about the user's own items, per item — to pick who an item was handed over to.
+  // Conversations about the user's own items, per item, to pick who an item was handed over to.
   const conversationsByItem: Record<string, { id: string; otherName: string }[]> = {};
   for (const c of conversations) {
     if (c.iOwnItem) (conversationsByItem[c.itemId] ??= []).push({ id: c.id, otherName: c.otherName });

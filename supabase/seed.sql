@@ -146,7 +146,7 @@ on conflict (id) do nothing;
 -- ---------------------------------------------------------------------------
 -- Ekstra genstande til test af paginering og filtre (50 stk.)
 -- Oprettet 7–90 dage tilbage, så forsidens "seneste 6" stadig er genstandene ovenfor.
--- Hver 12. er løst og hver 17. arkiveret — de må ikke blive vist.
+-- Hver 12. er løst og hver 17. arkiveret. De må ikke blive vist.
 -- ---------------------------------------------------------------------------
 
 with catalog (idx, title, category, brand, description, image) as (
