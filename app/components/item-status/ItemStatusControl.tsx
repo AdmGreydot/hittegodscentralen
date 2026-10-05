@@ -183,7 +183,11 @@ function ResolveDialog({
                 ? "Det vises ikke længere for andre. Du kan altid genåbne det under Mine genstande."
                 : "Opslaget er afsluttet og vises ikke længere for andre."}
             </p>
-            <EjendelsregisteretNudge className="mt-6" />
+            <EjendelsregisteretNudge
+              context={item.type === "found" ? "helped" : done === "gave_up" ? "gave-up" : "returned"}
+              compact
+              className="mt-6"
+            />
             <button
               type="button"
               onClick={close}

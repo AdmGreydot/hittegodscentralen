@@ -5,6 +5,7 @@ import { getCurrentUser } from "../../lib/auth";
 import { initials } from "../../lib/initials";
 import { getMyItems, getOwnProfile } from "../../lib/items";
 import { getConversations, getMessages } from "../../lib/messages";
+import EjendelsregisteretNudge from "../components/EjendelsregisteretNudge";
 import DeleteAccount from "./_components/DeleteAccount";
 import LoggedOut from "./_components/LoggedOut";
 import Messages from "./_components/Messages";
@@ -113,6 +114,7 @@ export default async function ProfilePage({ searchParams }: PageProps<"/profil">
             showThreadOnMobile={Boolean(requested && active?.id === requested)}
           />
         )}
+        {tab === "items" && <EjendelsregisteretNudge context="profile" className="mt-12 max-w-xl" />}
         {tab === "items" && <DeleteAccount />}
       </div>
     </main>

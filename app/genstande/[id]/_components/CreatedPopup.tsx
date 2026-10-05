@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { CircleCheck, X } from "lucide-react";
 import EjendelsregisteretNudge from "../../../components/EjendelsregisteretNudge";
+import type { ItemType } from "../../../../lib/item-card";
 
 const DURATION_MS = 8000;
 
 // Shown once after creating an item (?oprettet=1). Closes by itself after a few seconds; the timer
 // pauses while the pointer or keyboard focus is on it, so the link can be used.
 // `persistent` (development preview) keeps it open: no auto-close, and the URL is left alone.
-export default function CreatedPopup({ persistent = false }: { persistent?: boolean }) {
+export default function CreatedPopup({ type, persistent = false }: { type: ItemType; persistent?: boolean }) {
   const [open, setOpen] = useState(true);
   const [paused, setPaused] = useState(false);
   // Drop ?oprettet=1 so a reload doesn't show the popup again. history.replaceState changes the
@@ -61,7 +62,11 @@ export default function CreatedPopup({ persistent = false }: { persistent?: bool
           <p className="mt-1 font-light text-zinc-500">Det kan nu ses af alle på Hittegodscentralen.</p>
         </div>
 
-        <EjendelsregisteretNudge className="mx-6 mb-6 sm:mx-8" />
+        <EjendelsregisteretNudge
+          context={type === "lost" ? "lost-created" : "found-created"}
+          compact
+          className="mx-6 mb-6 sm:mx-8"
+        />
 
         {/* Countdown bar; closes the popup when the animation ends. With reduced motion there's
             no bar and no auto-close: the popup stays until closed. */}

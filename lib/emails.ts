@@ -1,4 +1,5 @@
 import "server-only";
+import { ejendelsregisteretUrl, NUDGE_COPY, NUDGE_PRICE, type NudgeContext } from "./ejendelsregisteret";
 import type { ItemType } from "./item-card";
 import { EXPIRY_WARNING_DAYS, ITEM_LIFETIME_MONTHS } from "./item-expiry";
 import {
@@ -21,6 +22,23 @@ function greeting(fullName: string) {
 
 export const inboxUrl = (conversationId?: string) =>
   `${SITE_URL}/profil?fane=beskeder${conversationId ? `&samtale=${conversationId}` : ""}`;
+
+// The Ejendelsregisteret box at the bottom of some mails (same texts as on the site).
+function nudgeHtml(context: NudgeContext) {
+  const copy = NUDGE_COPY[context];
+  return `<div style="margin-top:28px;padding:18px 20px;background:#fdf6e7;border:1px solid #f6dfa8;border-radius:12px;">
+<p style="margin:0;font-size:11px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.rust};">Ejendelsregisteret</p>
+<p style="margin:4px 0 0;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:${BRAND.brown};">${escapeHtml(copy.title)}</p>
+<p style="margin:8px 0 14px;font-size:14px;color:${BRAND.brown};">${escapeHtml(copy.text)}</p>
+<a href="${escapeHtml(ejendelsregisteretUrl(context, "email"))}" style="display:inline-block;background:${BRAND.brown};color:#fff;text-decoration:none;font-weight:bold;font-size:14px;padding:10px 18px;border-radius:10px;">Registrér dine ting</a>
+<p style="margin:10px 0 0;font-size:12px;color:#8a7a6e;">${NUDGE_PRICE}</p>
+</div>`;
+}
+
+function nudgeText(context: NudgeContext) {
+  const copy = NUDGE_COPY[context];
+  return `${copy.title}: ${copy.text} Registrér dine ting på Ejendelsregisteret: ${ejendelsregisteretUrl(context, "email")}`;
+}
 
 // Posters without an account manage their item through a signed link in their mails.
 const MANAGE_NOTE =
@@ -63,6 +81,7 @@ export function welcomeMail(fullName: string): Mail {
       "Med din profil kan du:",
       points.map((p) => `• ${p}`).join("\n"),
       `Kom i gang: ${SITE_URL}/opret`,
+      nudgeText("profile"),
     ].join("\n\n"),
     html: mailHtml(
       `<p style="margin-top:0;">${escapeHtml(greeting(fullName))},</p>
@@ -70,7 +89,8 @@ export function welcomeMail(fullName: string): Mail {
 <p>Med din profil kan du:</p>
 <ul style="padding-left:20px;">${points.map((p) => `<li style="margin-bottom:6px;">${p}</li>`).join("")}</ul>
 ${mailButton(`${SITE_URL}/opret`, "Opret et opslag")}
-<p style="font-size:13px;color:#71717a;">Har du spørgsmål, så skriv til os på <a href="${SITE_URL}/kontakt" style="color:#71717a;">hittegodscentralen.dk/kontakt</a>.</p>`,
+<p style="font-size:13px;color:#71717a;">Har du spørgsmål, så skriv til os på <a href="${SITE_URL}/kontakt" style="color:#71717a;">hittegodscentralen.dk/kontakt</a>.</p>
+${nudgeHtml("profile")}`,
     ),
   };
 }
@@ -128,6 +148,7 @@ export function itemCreatedMail(input: {
   const next = input.hasAccount
     ? "Når nogen skriver til dig, får du besked på e-mail, og du kan svare i din indbakke. Er tingen kommet hjem, kan du markere opslaget som løst under din profil."
     : "Når nogen skriver til dig, sender vi beskeden videre til denne e-mail. Din e-mail deles ikke. Først hvis du svarer, kan afsenderen se den.";
+  const nudge: NudgeContext = input.itemType === "lost" ? "lost-created" : "found-created";
   const lifetime = `Opslaget er aktivt i ${ITEM_LIFETIME_MONTHS} måneder. Vi skriver til dig, inden det udløber, så du kan forlænge det.`;
   return {
     subject: `Dit opslag "${input.itemTitle}" er oprettet`,
@@ -138,6 +159,7 @@ export function itemCreatedMail(input: {
       lifetime,
       `Se opslaget: ${link}`,
       input.manageUrl && `${MANAGE_NOTE} ${input.manageUrl}`,
+      nudgeText(nudge),
     ]
       .filter(Boolean)
       .join("\n\n"),
@@ -147,7 +169,8 @@ export function itemCreatedMail(input: {
 <p>${next}</p>
 ${mailButton(link, "Se dit opslag")}
 ${input.manageUrl ? manageHtml(input.manageUrl) : ""}
-<p style="font-size:13px;color:#71717a;">${lifetime}</p>`,
+<p style="font-size:13px;color:#71717a;">${lifetime}</p>
+${nudgeHtml(nudge)}`,
     ),
   };
 }

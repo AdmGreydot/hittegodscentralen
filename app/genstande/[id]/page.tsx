@@ -18,6 +18,7 @@ import { getItem, getSimilarItems, type ItemDetail } from "../../../lib/items";
 import { formatDate, PLACEHOLDER_IMAGE, type ItemCard } from "../../../lib/item-card";
 import { ITEM_LIFETIME_MONTHS } from "../../../lib/item-expiry";
 import { getConversations } from "../../../lib/messages";
+import EjendelsregisteretNudge from "../../components/EjendelsregisteretNudge";
 import ItemStatusControl from "../../components/item-status/ItemStatusControl";
 import LazyMap from "../../components/map/LazyMap";
 import ContactCard, { type ContactMode } from "./_components/ContactCard";
@@ -113,7 +114,7 @@ export default async function ItemPage({
       </nav>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        {(justCreated || previewCreated) && <CreatedPopup persistent={previewCreated} />}
+        {(justCreated || previewCreated) && <CreatedPopup type={item.type} persistent={previewCreated} />}
 
         {justExtended && item.status === "active" && (
           <p role="status" className="mb-6 flex items-center gap-2 rounded-xl bg-brand-green/10 px-4 py-3 text-sm text-brand-green">
@@ -147,6 +148,11 @@ export default async function ItemPage({
 
           <aside className="space-y-6">
             <Description item={item} className="hidden lg:block" />
+
+            {/* The poster of a lost item is the one most likely to want this. */}
+            {isOwner && item.type === "lost" && item.status === "active" && (
+              <EjendelsregisteretNudge context="item-page" />
+            )}
 
             <section className="rounded-2xl border border-zinc-200/70 bg-white p-6">
               <h2 className="font-serif text-sm font-bold uppercase tracking-[0.15em] text-zinc-500">
