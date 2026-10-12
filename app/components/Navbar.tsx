@@ -18,6 +18,14 @@ const NAV_LINKS = [
 
 const MOBILE_LINKS = [{ href: "/", label: "Forside" }, ...NAV_LINKS];
 
+// The gold call to action in the navbar: "Opret konto" when logged out, "Min profil" when logged
+// in. Shared, so the link and the button look the same.
+const PRIMARY_BUTTON =
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gold px-5 py-2.5 text-[17px] leading-6 font-medium text-brand-black transition-colors hover:bg-brand-gold/90";
+// Its counterpart in the mobile menu.
+const MOBILE_PRIMARY_BUTTON =
+  "flex items-center justify-center gap-2 rounded-md border border-brand-gold/60 px-4 py-2.5 text-brand-gold transition-colors hover:border-brand-gold hover:bg-brand-gold/10";
+
 // Pages with a full-bleed hero get a transparent navbar until the user scrolls.
 const HERO_ROUTES = ["/", "/om-os"];
 const SCROLL_THRESHOLD = 24;
@@ -103,11 +111,8 @@ export default function Navbar({ user }: { user: NavUser }) {
                   Log ud
                 </button>
               </form>
-              <Link
-                href="/profil"
-                className="flex gap-2.5 rounded-lg bg-brand-gold py-1.5 pr-2 pl-1.5 text-[17px] font-medium text-brand-black transition-colors hover:bg-brand-gold/90"
-              >
-                <p className="flex justify-center items-center"> Min profil</p>
+              <Link href="/profil" className={PRIMARY_BUTTON}>
+                Min profil
               </Link>
             </>
           ) : (
@@ -119,11 +124,7 @@ export default function Navbar({ user }: { user: NavUser }) {
               >
                 Log ind
               </button>
-              <button
-                type="button"
-                onClick={() => openAuth("signup")}
-                className="rounded-lg bg-brand-gold px-5 py-2.5 text-[17px] font-medium text-brand-black transition-colors hover:bg-brand-gold/90"
-              >
+              <button type="button" onClick={() => openAuth("signup")} className={PRIMARY_BUTTON}>
                 Opret konto
               </button>
             </>
@@ -207,10 +208,7 @@ export default function Navbar({ user }: { user: NavUser }) {
           <div className="mt-auto flex flex-col gap-3 border-t border-white/10 p-5">
             {user ? (
               <>
-                <Link
-                  href="/profil"
-                  className="flex items-center justify-center gap-2 rounded-md border border-brand-gold/60 px-4 py-2.5 text-brand-gold transition-colors hover:border-brand-gold hover:bg-brand-gold/10"
-                >
+                <Link href="/profil" className={MOBILE_PRIMARY_BUTTON}>
                   <UserRound size={18} aria-hidden />
                   Min profil
                 </Link>
@@ -243,7 +241,7 @@ export default function Navbar({ user }: { user: NavUser }) {
                     setMenuOpen(false);
                     openAuth("signup");
                   }}
-                  className="flex items-center justify-center gap-2 rounded-md border border-brand-gold/60 px-4 py-2.5 text-brand-gold transition-colors hover:border-brand-gold hover:bg-brand-gold/10"
+                  className={MOBILE_PRIMARY_BUTTON}
                 >
                   <UserPlus size={18} aria-hidden />
                   Opret konto
