@@ -12,6 +12,7 @@ import {
   X,
   ZoomIn,
 } from "lucide-react";
+import { CATEGORY_MAX_LENGTH, normalizeCategoryName, sameCategory } from "../../../lib/category-name";
 import { reverseGeocode } from "../../../lib/geo";
 import LazyMap, { type MapPoint } from "../map/LazyMap";
 import { formatDate, type ItemType } from "../../../lib/item-card";
@@ -22,7 +23,7 @@ import {
   type DraftErrors,
   type ItemDraft,
 } from "./draft";
-import { Field, Select, StepHeading, TextArea, TextInput } from "./fields";
+import { ComboBox, Field, Select, StepHeading, TextArea, TextInput } from "./fields";
 import { isHeicFile, resizeImage } from "./resizeImage";
 
 type StepProps = {
@@ -133,28 +134,51 @@ export function DetailsStep({
             />
           )}
         </Field>
-        <Field label="Kategori" required error={errors.categoryId}>
-          {(a11y) => (
-            <Select
-              {...a11y}
-              value={draft.categoryId}
-              onChange={(e) => update({ categoryId: e.target.value })}
-              required
-            >
-              <option value="" disabled>
-                Vælg kategori
-              </option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
+        <CategoryField
+          value={draft.category}
+          onChange={(category) => update({ category })}
+          categories={categories}
+          error={errors.category}
+        />
         <ImagePicker draft={draft} update={update} error={errors.image} />
       </div>
     </>
+  );
+}
+
+// Category: pick an existing one from the dropdown or type a new one. A new name is shown the way
+// it will be saved (trimmed, capital first letter); the server cleans and checks it again.
+function CategoryField({
+  value,
+  onChange,
+  categories,
+  error,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  categories: Category[];
+  error?: string;
+}) {
+  const name = normalizeCategoryName(value);
+  const isNew = name.length >= 2 && !categories.some((c) => sameCategory(c.name, name));
+
+  return (
+    <Field label="Kategori" required error={error} hint="Vælg fra listen, eller skriv en ny kategori.">
+      {(a11y) => (
+        <ComboBox
+          {...a11y}
+          value={value}
+          onChange={onChange}
+          options={categories.map((c) => c.name)}
+          matches={sameCategory}
+          createLabel={isNew ? `Opret ny kategori: ${name}` : null}
+          // Tidy up when leaving the field, so the input shows what will be saved.
+          onBlur={() => value && onChange(name)}
+          placeholder="Fx Elektronik, Nøgler, Cykel"
+          maxLength={CATEGORY_MAX_LENGTH + 10}
+        />
+      )}
+    </Field>
   );
 }
 
@@ -615,9 +639,9 @@ export function ContactStep({ draft, errors, update }: StepProps) {
 
 // --- 5. Review ---------------------------------------------------------------
 
-export function ReviewStep({ draft, categories }: { draft: ItemDraft; categories: Category[] }) {
+export function ReviewStep({ draft }: { draft: ItemDraft }) {
   const image = draft.imagePreview ?? draft.imageUrl;
-  const category = categories.find((c) => String(c.id) === draft.categoryId)?.name;
+  const category = normalizeCategoryName(draft.category);
   const typeLabel = draft.type === "found" ? "Fundet" : "Tabt";
   const place = [draft.address, draft.postalCode].filter(Boolean).join(" · ");
 

@@ -8,7 +8,9 @@ import {
 } from "../../lib/ejendelsregisteret";
 
 // Points people to Ejendelsregisteret, with a message that fits the moment (see NUDGE_COPY).
-// `compact` drops the bullet points, for dialogs and popups.
+// `compact` drops the bullet points, for dialogs and popups. Links keep the referrer (rel without
+// "noreferrer"), so Ejendelsregisteret sees visits as coming from hittegodscentralen.dk; the UTM
+// tags say which nudge.
 export default function EjendelsregisteretNudge({
   context,
   compact = false,
@@ -52,7 +54,7 @@ export default function EjendelsregisteretNudge({
       <a
         href={ejendelsregisteretUrl(context, "web")}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="noopener"
         className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-brand-brown px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-brown/90"
       >
         Registrér dine ting
@@ -63,7 +65,7 @@ export default function EjendelsregisteretNudge({
         <a
           href={ejendelsregisteretUrl(context, "web", "/")}
           target="_blank"
-          rel="noopener noreferrer"
+          rel="noopener"
           className="underline underline-offset-2 hover:text-brand-brown"
         >
           Læs mere

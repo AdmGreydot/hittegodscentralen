@@ -13,7 +13,12 @@ export const CONTACT_INBOX = "kontakt@hittegodscentralen.dk";
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hittegodscentralen.dk";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Created on first use, not when the file loads: the build loads every route without the
+// runtime secrets, and Resend throws without a key.
+let resend: Resend | undefined;
+function client() {
+  return (resend ??= new Resend(process.env.RESEND_API_KEY));
+}
 
 export type Mail = { subject: string; text: string; html: string };
 
@@ -29,7 +34,7 @@ function logoAttachment() {
 
 // Without replyTo, replies go to info@.
 export async function sendMail(mail: Mail & { to: string; replyTo?: string }) {
-  const { error } = await resend.emails.send({
+  const { error } = await client().emails.send({
     from: MAIL_FROM,
     ...mail,
     attachments: [logoAttachment()],
@@ -93,8 +98,9 @@ export function mailButton(href: string, label: string) {
   return `<p style="margin:24px 0;"><a href="${escapeHtml(href)}" style="display:inline-block;background:${BRAND.rust};color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:10px;">${escapeHtml(label)}</a></p>`;
 }
 
-// Max mails per hour for one visitor (by IP, unless another key is given), per kind.
-const RATE_LIMIT = { contact: 5, item: 5, signup: 5, reset: 5, "reset-email": 3 } as const;
+// Max attempts per hour for one visitor (by IP, unless another key is given), per kind: mails
+// sent from the forms, and new categories created from the item wizard.
+const RATE_LIMIT = { contact: 5, item: 5, signup: 5, reset: 5, "reset-email": 3, category: 5 } as const;
 export type MailKind = keyof typeof RATE_LIMIT;
 
 // Records the attempt and returns false if the limit is reached. Keys are only stored hashed.

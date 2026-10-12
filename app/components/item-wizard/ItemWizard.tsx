@@ -24,7 +24,7 @@ const FIELD_STEP: Partial<Record<keyof ItemDraft, number>> = {
   type: 0,
   title: 1,
   description: 1,
-  categoryId: 1,
+  category: 1,
   image: 1,
   region: 2,
   city: 2,
@@ -118,7 +118,7 @@ export default function ItemWizard({
 
     const form = new FormData();
     const fields = [
-      "type", "title", "description", "categoryId", "region",
+      "type", "title", "description", "category", "region",
       "city", "postalCode", "address", "occurredOn", "email",
     ] as const;
     for (const field of fields) form.set(field, draft[field] ?? "");
@@ -189,7 +189,7 @@ export default function ItemWizard({
             )}
             {step === 2 && <LocationStep draft={draft} errors={errors} update={update} />}
             {step === 3 && <ContactStep draft={draft} errors={errors} update={update} />}
-            {step === 4 && <ReviewStep draft={draft} categories={categories} />}
+            {step === 4 && <ReviewStep draft={draft} />}
             {step === 4 && mode === "create" && (
               <p className="mt-6 text-sm text-zinc-500">
                 Ved at oprette opslaget accepterer du vores{" "}

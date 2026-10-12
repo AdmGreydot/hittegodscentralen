@@ -145,7 +145,11 @@ export async function getItemFacets(): Promise<ItemFacets> {
           created_at: string;
         }[]
       >(),
-    supabase.from("categories").select("id, name").order("name").returns<{ id: number; name: string }[]>(),
+    supabase
+      .from("categories")
+      .select("id, name, user_created")
+      .order("name")
+      .returns<{ id: number; name: string; user_created: boolean }[]>(),
   ]);
   if (itemsResult.error) throw itemsResult.error;
   if (categoriesResult.error) throw categoriesResult.error;
@@ -189,7 +193,9 @@ export async function getItemFacets(): Promise<ItemFacets> {
         return { value, label: value, count, hint, keywords: codes.join(" ") };
       })
       .sort(byLabel),
+    // Categories users created only show once they have items, so empty ones don't clutter the list.
     categories: categoriesResult.data
+      .filter((c) => !c.user_created || categoryCounts.has(c.id))
       .map((c) => ({ value: String(c.id), label: c.name, count: categoryCounts.get(c.id) ?? 0 }))
       .sort(byLabel),
   };

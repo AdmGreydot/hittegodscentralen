@@ -9,7 +9,8 @@ import { lookupPostalCode } from "../../lib/geo";
 import { itemCreatedMail, itemDeletedMail } from "../../lib/emails";
 import { manageUrl, newExpiryDate } from "../../lib/item-expiry";
 import { getConversationPartners, notifyConversationPartners } from "../../lib/notifications";
-import { sendMail } from "../../lib/mail";
+import { categoryNameError, normalizeCategoryName, sameCategory } from "../../lib/category-name";
+import { sendMail, withinRateLimit } from "../../lib/mail";
 import { isResolutionFor, type ItemResolution } from "../../lib/item-card";
 import { createAdminClient } from "../../lib/supabase/admin";
 import {
@@ -56,7 +57,7 @@ function readDraft(form: FormData, loggedIn: boolean) {
     type: type === "lost" || type === "found" ? type : null,
     title: text(form, "title"),
     description: text(form, "description"),
-    categoryId: text(form, "categoryId"),
+    category: text(form, "category"),
     region: text(form, "region"),
     city: text(form, "city"),
     postalCode: text(form, "postalCode"),
@@ -103,13 +104,42 @@ async function itemFields(form: FormData, draft: ItemDraft, categoryId: number) 
   };
 }
 
-async function findCategory(supabase: ReturnType<typeof createAdminClient>, categoryId: string) {
-  const { data } = await supabase
+// The category typed or picked in the wizard: an existing one (whatever the case), or a new
+// one created from the cleaned name. New ones are rate limited, so nobody can flood the list.
+async function resolveCategory(
+  supabase: ReturnType<typeof createAdminClient>,
+  raw: string,
+): Promise<{ id: number } | { error: string }> {
+  const name = normalizeCategoryName(raw);
+  const invalid = categoryNameError(name);
+  if (invalid) return { error: invalid };
+
+  const { data: existing } = await supabase
+    .from("categories")
+    .select("id, name")
+    .returns<{ id: number; name: string }[]>();
+  const match = existing?.find((c) => sameCategory(c.name, name));
+  if (match) return { id: match.id };
+
+  if (!(await withinRateLimit("category"))) {
+    return { error: "Du har oprettet mange nye kategorier. Vælg en fra listen, eller prøv igen senere." };
+  }
+  const { data: created, error } = await supabase
+    .from("categories")
+    .insert({ name, user_created: true })
+    .select("id")
+    .single<{ id: number }>();
+  if (created) return created;
+
+  // Someone else created the same name a moment ago (unique on lower(name)): use theirs.
+  const { data: again } = await supabase
     .from("categories")
     .select("id")
-    .eq("id", Number(categoryId))
+    .ilike("name", name.replace(/[\\%_]/g, "\\$&"))
     .maybeSingle<{ id: number }>();
-  return data;
+  if (again) return again;
+  console.error("resolveCategory: insert failed", error);
+  return { error: "Kategorien kunne ikke gemmes. Prøv igen om lidt." };
 }
 
 // Uploads the image and links it to the item. Returns the storage path, or null on failure
@@ -162,8 +192,8 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
   if (Object.keys(errors).length) return { errors };
 
   const supabase = createAdminClient();
-  const category = await findCategory(supabase, draft.categoryId);
-  if (!category) return { errors: { categoryId: "Vælg en kategori." } };
+  const category = await resolveCategory(supabase, draft.category);
+  if ("error" in category) return { errors: { category: category.error } };
 
   const fields = await itemFields(form, draft, category.id);
 
@@ -231,8 +261,8 @@ export async function updateItem(itemId: string, form: FormData): Promise<Create
   const owned = await ownedItem(supabase, itemId);
   if (!owned) return { message: "Du kan kun rette dine egne opslag." };
 
-  const category = await findCategory(supabase, draft.categoryId);
-  if (!category) return { errors: { categoryId: "Vælg en kategori." } };
+  const category = await resolveCategory(supabase, draft.category);
+  if ("error" in category) return { errors: { category: category.error } };
 
   const { error: updateError } = await supabase
     .from("items")

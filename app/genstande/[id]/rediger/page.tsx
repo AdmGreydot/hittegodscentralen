@@ -30,7 +30,7 @@ export default async function EditItemPage({ params }: PageProps<"/genstande/[id
         type: item.type,
         title: item.title,
         description: item.description ?? "",
-        categoryId: item.category ? String(item.category.id) : "",
+        category: item.category?.name ?? "",
         imageUrl: item.images[0]?.url ?? null,
         region: item.region ?? "",
         city: item.city ?? "",

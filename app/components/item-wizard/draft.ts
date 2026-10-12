@@ -1,3 +1,4 @@
+import { categoryNameError, normalizeCategoryName } from "../../../lib/category-name";
 import type { ItemType } from "../../../lib/item-card";
 
 // Everything the create/edit wizard collects. Strings are kept as typed so inputs stay controlled.
@@ -5,7 +6,7 @@ export type ItemDraft = {
   type: ItemType | null;
   title: string;
   description: string;
-  categoryId: string;
+  category: string; // name: picked from the list or typed; a new one is created on save
   image: File | null;
   imagePreview: string | null; // blob: URL for the chosen file
   imageUrl: string | null; // existing image when editing
@@ -24,7 +25,7 @@ export const EMPTY_DRAFT: ItemDraft = {
   type: null,
   title: "",
   description: "",
-  categoryId: "",
+  category: "",
   image: null,
   imagePreview: null,
   imageUrl: null,
@@ -83,7 +84,8 @@ export function validateStep(step: number, draft: ItemDraft): DraftErrors {
     else if (draft.description.trim().length > 2000) {
       errors.description = "Beskrivelsen må højst være 2000 tegn.";
     }
-    if (!draft.categoryId) errors.categoryId = "Vælg en kategori.";
+    const categoryError = categoryNameError(normalizeCategoryName(draft.category));
+    if (categoryError) errors.category = categoryError;
   }
 
   if (step === 2) {
