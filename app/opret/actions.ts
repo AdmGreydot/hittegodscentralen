@@ -184,7 +184,10 @@ async function removeImages(
 // user_id is null and contact goes to the e-mail given.
 export async function createItem(form: FormData): Promise<CreateItemResult> {
   // Honeypot filled in: a bot. Act as if it worked, without saving anything.
-  if (text(form, HONEYPOT_FIELD)) redirect("/genstande");
+  if (text(form, HONEYPOT_FIELD)) {
+    console.warn("createItem: honeypot filled, not saved");
+    redirect("/genstande");
+  }
 
   const user = await getCurrentUser();
   const userId = user?.id ?? null;

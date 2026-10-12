@@ -25,8 +25,8 @@ const SECTIONS: LegalSection[] = [
         </p>
         <p>
           Har du spørgsmål til vilkårene, kan du skrive til os på{" "}
-          <a href="mailto:info@hittegodscentralen.dk">
-            info@hittegodscentralen.dk
+          <a href="mailto:kontakt@hittegodscentralen.dk">
+            kontakt@hittegodscentralen.dk
           </a>{" "}
           eller via <Link href="/kontakt">kontaktformularen</Link>.
         </p>

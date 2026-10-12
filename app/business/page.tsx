@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     "Hittegodscentralen for virksomheder og organisationer. Kommer snart.",
 };
 
-const CONTACT_EMAIL = "info@hittegodscentralen.dk";
+const CONTACT_EMAIL = "kontakt@hittegodscentralen.dk";
 
 const ORGANISATIONS: { icon: LucideIcon; label: string }[] = [
   { icon: School, label: "Skoler" },

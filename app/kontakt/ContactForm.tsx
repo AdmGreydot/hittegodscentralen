@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { CircleCheck } from "lucide-react";
 import { AuthInput, FormMessage, SubmitButton } from "../components/auth/fields";
+import { honeypotInputProps } from "../../lib/honeypot";
 import { sendContactMail, type MailResult } from "../mail/actions";
 
 export default function ContactForm({
@@ -40,8 +41,8 @@ export default function ContactForm({
       {/* Honeypot: hidden from people and screen readers, but bots filling every field will fill it. */}
       <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
         <label>
-          Website
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+          Lad dette felt være tomt
+          <input {...honeypotInputProps} />
         </label>
       </div>
 

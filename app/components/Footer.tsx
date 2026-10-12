@@ -11,8 +11,8 @@ const CONTACT = [
   { href: "/kontakt", label: "Skriv til os" },
   { href: null, label: "J Skjoldborgs Vej 57, 8230 Åbyhøj" },
   {
-    href: "mailto:info@hittegodscentralen.dk",
-    label: "info@hittegodscentralen.dk",
+    href: "mailto:kontakt@hittegodscentralen.dk",
+    label: "kontakt@hittegodscentralen.dk",
   },
 ];
 

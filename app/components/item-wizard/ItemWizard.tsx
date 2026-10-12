@@ -14,6 +14,7 @@ import {
   type DraftErrors,
   type ItemDraft,
 } from "./draft";
+import { honeypotInputProps } from "../../../lib/honeypot";
 import Stepper from "./Stepper";
 import { ContactStep, DetailsStep, LocationStep, ReviewStep, TypeStep } from "./steps";
 
@@ -178,8 +179,8 @@ export default function ItemWizard({
           {/* Honeypot: invisible to people and screen readers; bots that fill every field fill this. */}
           <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
             <label>
-              Website
-              <input ref={honeypotRef} type="text" name={HONEYPOT_FIELD} tabIndex={-1} autoComplete="off" />
+              Lad dette felt være tomt
+              <input ref={honeypotRef} {...honeypotInputProps} />
             </label>
           </div>
           <div className="p-6 sm:p-8">

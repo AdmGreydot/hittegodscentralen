@@ -59,8 +59,7 @@ export const REGIONS = [
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
-// Hidden field only bots fill in. Sounds like a real field so they take the bait.
-export const HONEYPOT_FIELD = "website";
+export { HONEYPOT_FIELD } from "../../../lib/honeypot";
 
 export type DraftErrors = Partial<Record<keyof ItemDraft, string>>;
 

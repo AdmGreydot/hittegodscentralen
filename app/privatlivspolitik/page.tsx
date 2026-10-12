@@ -26,8 +26,8 @@ const SECTIONS: LegalSection[] = [
           <br />
           J Skjoldborgs Vej 57, 8230 Åbyhøj
           <br />
-          <a href="mailto:info@hittegodscentralen.dk">
-            info@hittegodscentralen.dk
+          <a href="mailto:kontakt@hittegodscentralen.dk">
+            kontakt@hittegodscentralen.dk
           </a>
         </p>
       </>
@@ -218,8 +218,8 @@ const SECTIONS: LegalSection[] = [
           <strong>Opslag:</strong> er synlige i {ITEM_LIFETIME_MONTHS} måneder,
           eller til du forlænger, løser eller sletter dem. Derefter gemmes de
           skjult, så du kan se dem under din profil og genåbne dem, indtil du
-          sletter dem eller din konto. Opslag oprettet uden profil kan du administrere og slette via
-          linket i de e-mails, vi sender dig.
+          sletter dem eller din konto. Opslag oprettet uden profil kan du
+          administrere og slette via linket i de e-mails, vi sender dig.
         </li>
         <li>
           <strong>Beskeder:</strong> så længe opslaget og jeres konti findes.
@@ -256,8 +256,8 @@ const SECTIONS: LegalSection[] = [
         </ul>
         <p>
           Skriv til{" "}
-          <a href="mailto:info@hittegodscentralen.dk">
-            info@hittegodscentralen.dk
+          <a href="mailto:kontakt@hittegodscentralen.dk">
+            kontakt@hittegodscentralen.dk
           </a>
           , så svarer vi inden for en måned. Er du utilfreds med, hvordan vi
           behandler dine oplysninger, kan du klage til{" "}

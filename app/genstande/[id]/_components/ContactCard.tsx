@@ -5,6 +5,7 @@ import { CircleCheck, Info, Loader2, Lock, LogIn, Mail, Send, UserPlus } from "l
 import { initials } from "../../../../lib/initials";
 import type { ItemType } from "../../../../lib/item-card";
 import { useAuthModal } from "../../../components/auth/AuthModal";
+import { honeypotInputProps } from "../../../../lib/honeypot";
 import { sendItemMail } from "../../../mail/actions";
 import { startConversation } from "../../../profil/actions";
 
@@ -48,8 +49,6 @@ function subtitle(mode: ContactMode, role: Role) {
   }
 }
 
-// Name of the mail form's honeypot field. Sounds like a real field so bots fill it in.
-export const HONEYPOT_FIELD = "website";
 
 export default function ContactCard({
   mode,
@@ -265,13 +264,8 @@ function MailForm({
         className="absolute -left-[9999px] h-px w-px overflow-hidden"
       >
         <label>
-          Website
-          <input
-            type="text"
-            name={HONEYPOT_FIELD}
-            tabIndex={-1}
-            autoComplete="off"
-          />
+          Lad dette felt være tomt
+          <input {...honeypotInputProps} />
         </label>
       </div>
 

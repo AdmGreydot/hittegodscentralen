@@ -4,10 +4,9 @@ import type { ItemStatus, ItemType } from "../../lib/item-card";
 import { contactFormMail, itemRelayMail, senderReceiptMail } from "../../lib/emails";
 import { manageUrl } from "../../lib/item-expiry";
 import { CONTACT_INBOX, sendMail, withinRateLimit } from "../../lib/mail";
+import { HONEYPOT_FIELD } from "../../lib/honeypot";
 import { createAdminClient } from "../../lib/supabase/admin";
 
-// Same name as the honeypot fields in the forms. Sounds like a real field so bots fill it in.
-const HONEYPOT_FIELD = "website";
 
 const MAX_MESSAGE_LENGTH = 2000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,8 +47,12 @@ function readSender(form: FormData) {
 
 // The contact form on /kontakt. Delivered to our own inbox; replying goes straight to the sender.
 export async function sendContactMail(form: FormData): Promise<MailResult> {
-  // Honeypot filled in: a bot. Pretend it worked so it doesn't retry.
-  if (text(form, HONEYPOT_FIELD)) return { sent: true };
+  // Honeypot filled in: a bot. Pretend it worked so it doesn't retry, but log it, so a real
+  // person caught by it (e.g. by autofill) shows up in the logs.
+  if (text(form, HONEYPOT_FIELD)) {
+    console.warn("sendContactMail: honeypot filled, not sent");
+    return { sent: true };
+  }
 
   const { sender, errors } = readSender(form);
   if (Object.keys(errors).length) return { errors };
@@ -69,7 +72,10 @@ export async function sendContactMail(form: FormData): Promise<MailResult> {
 // server: the mail is sent from info@ with Reply-To set to the sender, so the poster decides
 // for themselves whether to answer (and thereby share their address).
 export async function sendItemMail(itemId: string, form: FormData): Promise<MailResult> {
-  if (text(form, HONEYPOT_FIELD)) return { sent: true };
+  if (text(form, HONEYPOT_FIELD)) {
+    console.warn("sendItemMail: honeypot filled, not sent");
+    return { sent: true };
+  }
   if (!UUID_RE.test(itemId)) return { message: "Genstanden findes ikke." };
 
   const { sender, errors } = readSender(form);
