@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
-import { ArrowLeft, CircleCheck, Info, Loader2, Lock, LogIn, Mail, Send, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  CircleCheck,
+  Info,
+  Loader2,
+  Lock,
+  LogIn,
+  Mail,
+  Send,
+  UserPlus,
+} from "lucide-react";
 import { initials } from "../../../../lib/initials";
 import type { ItemType } from "../../../../lib/item-card";
 import { useAuthModal } from "../../../components/auth/AuthModal";
@@ -49,7 +59,6 @@ function subtitle(mode: ContactMode, role: Role) {
   }
 }
 
-
 export default function ContactCard({
   mode,
   type,
@@ -79,13 +88,27 @@ export default function ContactCard({
 
       <div className="p-6">
         {mode === "chat" && (
-          <ChatForm owner={owner} role={role} placeholder={copy.placeholder} itemId={itemId} />
+          <ChatForm
+            owner={owner}
+            role={role}
+            placeholder={copy.placeholder}
+            itemId={itemId}
+          />
         )}
         {mode === "login" && (
-          <LoginOrMail owner={owner} role={role} placeholder={copy.placeholder} itemId={itemId} />
+          <LoginOrMail
+            owner={owner}
+            role={role}
+            placeholder={copy.placeholder}
+            itemId={itemId}
+          />
         )}
         {mode === "mail" && (
-          <MailForm role={role} placeholder={copy.placeholder} itemId={itemId} />
+          <MailForm
+            role={role}
+            placeholder={copy.placeholder}
+            itemId={itemId}
+          />
         )}
         {mode === "own" && (
           <p className="flex gap-3 rounded-xl bg-zinc-100 p-4 text-sm text-zinc-600">
@@ -303,7 +326,10 @@ function MailForm({
           // The server checks the honeypot and looks up the poster's e-mail.
           const result = await sendItemMail(itemId, form);
           if (result.sent) setSent(true);
-          else setNotice(result.message ?? Object.values(result.errors ?? {})[0] ?? null);
+          else
+            setNotice(
+              result.message ?? Object.values(result.errors ?? {})[0] ?? null,
+            );
         });
       }}
     >
@@ -317,16 +343,6 @@ function MailForm({
           Lad dette felt være tomt
           <input {...honeypotInputProps} />
         </label>
-      </div>
-
-      <div className="flex items-center gap-3 rounded-xl bg-zinc-100 px-4 py-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-gold/30 text-brand-brown">
-          <Mail size={18} aria-hidden />
-        </span>
-        <p className="text-sm text-zinc-600">
-          Din besked sendes gennem Hittegodscentralen, så {role.of} e-mail
-          forbliver privat.
-        </p>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
