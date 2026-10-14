@@ -1,20 +1,22 @@
 # Import af data fra den gamle Hittegodscentralen
 
+**Arkiv.** Importen er kørt i produktion den 14. oktober 2026, og eksporten i `data/` er slettet. Scriptene ligger her til reference, og `npm run import:*`-kommandoerne er fjernet. Skal de køres igen, kør dem direkte med `npx tsx` (se nedenfor) og en ny eksport.
+
 Scripts, der flytter data fra den gamle Hittegodscentralen over i den nye Supabase-database.
 
 ## Mapper
 
 | Sti | Indhold |
 | --- | --- |
-| `scripts/import/` | Selve scriptene (TypeScript, køres med `tsx`) |
-| `scripts/import/data/` | Eksporten fra det gamle system. **Committes aldrig** (står i `.gitignore`), da den indeholder navne, e-mails og telefonnumre |
+| `scripts/archive/legacy-import/` | Selve scriptene (TypeScript, køres med `tsx`) |
+| `scripts/archive/legacy-import/data/` | Eksporten fra det gamle system. **Committes aldrig** (står i `.gitignore`), da den indeholder navne, e-mails og telefonnumre |
 
 ## Sådan kører et script
 
 Scriptene bruger serverens kode og `.env.local`, ligesom `npm run mail:test`:
 
 ```bash
-npx tsx --conditions=react-server --env-file=.env.local scripts/import/<script>.ts
+npx tsx --conditions=react-server --env-file=.env.local scripts/archive/legacy-import/<script>.ts
 ```
 
 Alle scripts skal som udgangspunkt køre **uden at skrive noget** og kun vise, hvad de ville gøre. Først med `--commit` skriver de til databasen. Kør altid mod testdatabasen først.
@@ -23,7 +25,10 @@ Alle scripts skal som udgangspunkt køre **uden at skrive noget** og kun vise, h
 
 | Kommando | Gør |
 | --- | --- |
-| `npm run import:users` | Opretter gamle brugere uden adgangskode og sender dem en mail om at vælge en ny. Læser `data/users.json`. Se kommentaren øverst i `users.ts` for flag |
+| `npm run import:transform` | Læser WordPress-eksporten (de tre `hg-*.json`-filer) og skriver rensede data til `data/out/`: `users.json`, `items.json` og `report.md`. Rører ikke databasen |
+| `npm run import:images` | Henter billederne til opslagene fra den gamle side ned i `data/images/` (kør før domænet flyttes). Kan køres igen; hentede billeder springes over |
+| `npm run import:users` | Opretter gamle brugere uden adgangskode og sender dem en mail om at vælge en ny. Læser `data/out/users.json`. Se kommentaren øverst i `users.ts` for flag |
+| `npm run import:load` | Opretter kategorier og opslag fra `data/out/items.json` og uploader billederne fra `data/images/`. Kør `import:users -- --commit` først. Kan genoptages via `data/out/loaded-<projekt>.json` (én fil pr. database) |
 
 ## Den nye database
 

@@ -23,21 +23,27 @@ export default function ItemCard({
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-sm">
-      <div className="relative aspect-[16/9] bg-zinc-200">
+      {/* Same target as "Vis genstand"; hidden from keyboard and screen readers so it isn't a second link. */}
+      <Link
+        href={`/genstande/${item.id}`}
+        tabIndex={-1}
+        aria-hidden
+        className="group relative block aspect-[16/9] overflow-hidden bg-zinc-200"
+      >
         <Image
           src={item.imageUrl}
           alt={item.imageUrl === PLACEHOLDER_IMAGE ? "" : item.title}
           fill
           sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           unoptimized={item.imageUrl === PLACEHOLDER_IMAGE}
-          className="object-cover"
+          className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
         />
         <span
           className={`absolute top-4 left-4 rounded-full px-3.5 py-1 text-sm font-semibold uppercase tracking-wide text-white ${badge.className}`}
         >
           {badge.label}
         </span>
-      </div>
+      </Link>
 
       <div className="flex flex-1 flex-col p-6">
         <div className="flex-1 pb-8">

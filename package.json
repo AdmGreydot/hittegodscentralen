@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "mail:test": "tsx --conditions=react-server --env-file=.env.local scripts/send-test-mails.ts",
-    "postinstall": "node scripts/copy-maplibre-worker.mjs",
-    "import:users": "tsx --conditions=react-server --env-file=.env.local scripts/import/users.ts"
+    "postinstall": "node scripts/copy-maplibre-worker.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -30,6 +29,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

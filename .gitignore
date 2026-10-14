@@ -43,6 +43,5 @@ next-env.d.ts
 # Copied from node_modules on npm install (scripts/copy-maplibre-worker.mjs)
 /public/maplibre
 
-# Old Hittegodscentralen data for scripts/import. Contains personal data: never commit it.
-/scripts/import/data/*
-!/scripts/import/data/.gitkeep
+# Old Hittegodscentralen data for scripts/archive/legacy-import. Contains personal data: never commit it.
+/scripts/archive/legacy-import/data/*

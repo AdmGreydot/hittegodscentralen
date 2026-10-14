@@ -112,7 +112,7 @@ ${mailButton(link, "Vælg ny adgangskode")}
   };
 }
 
-// To users moved over from the old Hittegodscentralen (scripts/import/users.ts). Their old
+// To users moved over from the old Hittegodscentralen (scripts/archive/legacy-import/users.ts). Their old
 // password couldn't come along, so they choose a new one through the link.
 export function legacyAccountMail(fullName: string, link: string): Mail {
   const intro =
