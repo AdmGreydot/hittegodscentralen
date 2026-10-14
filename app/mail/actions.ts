@@ -5,6 +5,7 @@ import { contactFormMail, itemRelayMail, senderReceiptMail } from "../../lib/ema
 import { manageUrl } from "../../lib/item-expiry";
 import { CONTACT_INBOX, sendMail, withinRateLimit } from "../../lib/mail";
 import { HONEYPOT_FIELD } from "../../lib/honeypot";
+import { getRecipient } from "../../lib/notifications";
 import { createAdminClient } from "../../lib/supabase/admin";
 
 
@@ -68,9 +69,10 @@ export async function sendContactMail(form: FormData): Promise<MailResult> {
   return { sent: true };
 }
 
-// A message to someone who posted an item without an account. Their e-mail never leaves the
-// server: the mail is sent from info@ with Reply-To set to the sender, so the poster decides
-// for themselves whether to answer (and thereby share their address).
+// A message by e-mail to whoever posted an item, so the sender doesn't need an account. Posters
+// with an account can also be reached by chat, but the mail lets guests write without logging in.
+// The poster's e-mail never leaves the server: the mail is sent from info@ with Reply-To set to
+// the sender, so the poster decides for themselves whether to answer (and thereby share their address).
 export async function sendItemMail(itemId: string, form: FormData): Promise<MailResult> {
   if (text(form, HONEYPOT_FIELD)) {
     console.warn("sendItemMail: honeypot filled, not sent");
@@ -94,20 +96,27 @@ export async function sendItemMail(itemId: string, form: FormData): Promise<Mail
       user_id: string | null;
       contact_email: string | null;
     }>();
-  if (!item || item.user_id || !item.contact_email) return { message: "Genstanden findes ikke." };
+  if (!item) return { message: "Genstanden findes ikke." };
   if (item.status !== "active") return { message: "Opslaget er ikke længere aktivt." };
 
   if (!(await withinRateLimit("item"))) return { message: RATE_LIMITED };
 
+  // A poster with an account has their e-mail in auth.users, a guest's is on the item.
+  const to = item.user_id
+    ? (await getRecipient(supabase, item.user_id))?.email
+    : item.contact_email;
+  if (!to) return { message: SEND_FAILED };
+
   const sent = await sendMail({
-    to: item.contact_email,
+    to,
     replyTo: sender.email,
     ...itemRelayMail({
       sender,
       itemId,
       itemTitle: item.title,
       itemType: item.type,
-      manageUrl: manageUrl(itemId),
+      // Posters with an account manage their items under their profile.
+      manageUrl: item.user_id ? undefined : manageUrl(itemId),
     }),
   });
   if (sent) {

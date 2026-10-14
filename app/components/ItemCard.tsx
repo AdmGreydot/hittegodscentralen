@@ -12,13 +12,7 @@ const BADGE = {
   found: { label: "Fundet", className: "bg-brand-green" },
 };
 
-export default function ItemCard({
-  item,
-  showDate = false,
-}: {
-  item: ItemCardData;
-  showDate?: boolean;
-}) {
+export default function ItemCard({ item }: { item: ItemCardData }) {
   const badge = BADGE[item.type];
 
   return (
@@ -47,7 +41,9 @@ export default function ItemCard({
 
       <div className="flex flex-1 flex-col p-6">
         <div className="flex-1 pb-8">
-          <h3 className="font-serif text-xl font-bold text-brand-black">{item.title}</h3>
+          <h3 className="font-serif text-xl font-bold text-brand-black">
+            {item.title}
+          </h3>
           {item.description && (
             <p className="mt-2 line-clamp-2 font-light leading-relaxed text-zinc-500">
               {item.description}
@@ -59,15 +55,20 @@ export default function ItemCard({
           <div className="min-w-0 text-sm font-light text-zinc-500">
             {item.location && (
               <p className="flex items-center gap-1.5">
-                <MapPin size={16} strokeWidth={1.5} className="shrink-0" aria-hidden />
+                <MapPin
+                  size={16}
+                  strokeWidth={1.5}
+                  className="shrink-0"
+                  aria-hidden
+                />
                 <span className="truncate">{item.location}</span>
               </p>
             )}
-            {showDate && (
-              <p className="mt-1 text-zinc-400">
-                <time dateTime={item.occurredAt}>{formatDate(item.occurredAt)}</time>
-              </p>
-            )}
+            <p className="mt-1 ml-1 text-zinc-400">
+              <time dateTime={item.occurredAt}>
+                {formatDate(item.occurredAt)}
+              </time>
+            </p>
           </div>
           <Link
             href={`/genstande/${item.id}`}

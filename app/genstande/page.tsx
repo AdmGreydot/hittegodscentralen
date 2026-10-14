@@ -81,7 +81,7 @@ export default async function GenstandePage({ searchParams }: PageProps<"/gensta
               {results.items.length > 0 ? (
                 <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {results.items.map((item) => (
-                    <ItemCard key={item.id} item={item} showDate />
+                    <ItemCard key={item.id} item={item} />
                   ))}
                 </div>
               ) : (

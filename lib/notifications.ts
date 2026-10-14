@@ -21,7 +21,7 @@ type ConversationRef = {
 };
 
 // E-mail and name of a user. The e-mail lives in auth.users, the name in public.users.
-async function getRecipient(supabase: Admin, userId: string) {
+export async function getRecipient(supabase: Admin, userId: string) {
   const { data, error } = await supabase.auth.admin.getUserById(userId);
   if (error || !data.user?.email) return null;
   const fullName = data.user.user_metadata?.full_name;

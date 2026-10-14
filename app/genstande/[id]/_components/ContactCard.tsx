@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
-import { CircleCheck, Info, Loader2, Lock, LogIn, Mail, Send, UserPlus } from "lucide-react";
+import { ArrowLeft, CircleCheck, Info, Loader2, Lock, LogIn, Mail, Send, UserPlus } from "lucide-react";
 import { initials } from "../../../../lib/initials";
 import type { ItemType } from "../../../../lib/item-card";
 import { useAuthModal } from "../../../components/auth/AuthModal";
@@ -10,7 +10,7 @@ import { sendItemMail } from "../../../mail/actions";
 import { startConversation } from "../../../profil/actions";
 
 // chat:  the poster has an account and the viewer is logged in
-// login: the poster has an account, but the viewer must log in to write to them
+// login: the poster has an account; the viewer can log in to chat, or send an e-mail without logging in
 // mail:  the poster has no account; the viewer sends an e-mail relayed through Hittegodscentralen
 // own:   the viewer is the poster
 export type ContactMode = "chat" | "login" | "mail" | "own";
@@ -41,7 +41,7 @@ function subtitle(mode: ContactMode, role: Role) {
     case "chat":
       return `Skriv direkte til ${role.the} via chat. Din besked er privat.`;
     case "login":
-      return `Du skal være logget ind for at skrive til ${role.the}.`;
+      return `Log ind for at chatte med ${role.the}, eller send en e-mail uden login.`;
     case "mail":
       return `${role.The} har ikke en profil. Send en e-mail via Hittegodscentralen.`;
     case "own":
@@ -82,7 +82,7 @@ export default function ContactCard({
           <ChatForm owner={owner} role={role} placeholder={copy.placeholder} itemId={itemId} />
         )}
         {mode === "login" && (
-          <LoginPrompt owner={owner} role={role} />
+          <LoginOrMail owner={owner} role={role} placeholder={copy.placeholder} itemId={itemId} />
         )}
         {mode === "mail" && (
           <MailForm role={role} placeholder={copy.placeholder} itemId={itemId} />
@@ -169,6 +169,56 @@ function ChatForm({
       <Notice text={notice} />
       <FinePrint>Din e-mail deles ikke med {role.the}</FinePrint>
     </form>
+  );
+}
+
+// A poster with an account can be reached by chat after logging in, or by e-mail without an account.
+function LoginOrMail({
+  owner,
+  role,
+  placeholder,
+  itemId,
+}: {
+  owner: Owner;
+  role: Role;
+  placeholder: string;
+  itemId: string;
+}) {
+  const [byMail, setByMail] = useState(false);
+
+  if (byMail) {
+    return (
+      <>
+        <MailForm role={role} placeholder={placeholder} itemId={itemId} />
+        <button
+          type="button"
+          onClick={() => setByMail(false)}
+          className="mx-auto mt-4 flex items-center gap-1.5 text-sm text-zinc-500 hover:text-brand-black"
+        >
+          <ArrowLeft size={14} aria-hidden />
+          Log hellere ind og chat
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <LoginPrompt owner={owner} role={role} />
+      <div className="mt-5 flex items-center gap-3 text-xs text-zinc-400">
+        <span className="h-px flex-1 bg-zinc-200" />
+        eller
+        <span className="h-px flex-1 bg-zinc-200" />
+      </div>
+      <button
+        type="button"
+        onClick={() => setByMail(true)}
+        className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-rust font-medium text-white transition-colors hover:bg-brand-rust/90"
+      >
+        <Mail size={18} aria-hidden />
+        Send en e-mail uden login
+      </button>
+    </>
   );
 }
 
