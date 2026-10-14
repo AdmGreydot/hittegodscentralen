@@ -1,6 +1,7 @@
 // Sends one of every e-mail the site sends, with sample data, so they can be checked in a real
-// inbox. Run: npm run mail:test -- you@example.com
+// inbox. Run: npm run mail:test -- you@example.com ["Opslag oprettet"] (optional label filter)
 import {
+  legacyAccountMail,
   accountDeletedMail,
   itemClosedMail,
   itemExpiredMail,
@@ -20,6 +21,7 @@ import {
 import { SITE_URL, sendMail, type Mail } from "../lib/mail";
 
 const to = process.argv[2];
+const filter = process.argv[3]?.toLowerCase();
 if (!to || !to.includes("@")) {
   console.error("Brug: npm run mail:test -- din@mail.dk");
   process.exit(1);
@@ -39,6 +41,7 @@ const sender = {
 const mails: [string, Mail][] = [
   ["Bekræft e-mail", confirmEmailMail(NAME, `${SITE_URL}/auth/confirm?token_hash=test&type=signup&next=/profil`)],
   ["Velkomst", welcomeMail(NAME)],
+  ["Gammel bruger: vælg ny adgangskode", legacyAccountMail(NAME, `${SITE_URL}/auth/confirm?token_hash=test&type=recovery&next=/nulstil-adgangskode`)],
   ["Nulstil adgangskode", resetPasswordMail(NAME, `${SITE_URL}/auth/confirm?token_hash=test&type=recovery&next=/nulstil-adgangskode`)],
   ["Ny besked", newMessageMail({ recipientName: NAME, senderName: sender.name, itemTitle: "JBL højtaler", body: sender.message, conversationId: CONVERSATION_ID })],
   ["Opslag oprettet (med profil)", itemCreatedMail({ fullName: NAME, itemId: ITEM_ID, itemTitle: "JBL højtaler", itemType: "lost", hasAccount: true })],
@@ -63,6 +66,7 @@ const mails: [string, Mail][] = [
 
 async function main() {
   for (const [label, mail] of mails) {
+    if (filter && !label.toLowerCase().includes(filter)) continue;
     const ok = await sendMail({ to, ...mail, subject: `[TEST] ${mail.subject}` });
     console.log(`${ok ? "✓" : "✗"} ${label}`);
     // Resend allows a few requests per second.

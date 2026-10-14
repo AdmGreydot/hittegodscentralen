@@ -66,6 +66,12 @@ function readDraft(form: FormData, loggedIn: boolean) {
     email: text(form, "email").toLowerCase(),
   };
 
+  const image = form.get("image");
+  const file = image instanceof File && image.size > 0 ? image : null;
+  // Lets the image check pass: a new file, or the existing image kept when editing.
+  draft.image = file;
+  draft.imageUrl = text(form, "keepImage") ? "keep" : null;
+
   // Same checks as the wizard, all steps except the review.
   const errors: DraftErrors = {};
   for (let step = 0; step < STEPS.length - 1; step++) {
@@ -73,8 +79,6 @@ function readDraft(form: FormData, loggedIn: boolean) {
     Object.assign(errors, validateStep(step, draft));
   }
 
-  const image = form.get("image");
-  const file = image instanceof File && image.size > 0 ? image : null;
   if (file && (!IMAGE_TYPES[file.type] || file.size > MAX_UPLOAD_BYTES)) {
     errors.image = "Billedet kunne ikke bruges. Prøv et andet billede.";
   }
@@ -209,17 +213,19 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
       contact_email: userId ? null : draft.email,
       expires_at: newExpiryDate(),
     })
-    .select("id")
+    // user_id is set by the database when the e-mail belongs to an account (claim_guest_items).
+    .select("id, user_id")
     .single();
   if (insertError || !item) {
     console.error("createItem: insert failed", insertError);
     return { message: "Opslaget kunne ikke oprettes. Prøv igen om lidt." };
   }
 
-  if (file && !(await saveImage(supabase, file, item.id, userId))) {
+  const ownerId: string | null = item.user_id;
+  if (file && !(await saveImage(supabase, file, item.id, ownerId))) {
     // Don't leave a half-created item behind.
     await supabase.from("items").delete().eq("id", item.id);
-    return { message: "Billedet kunne ikke gemmes. Prøv igen, eller opret uden billede." };
+    return { message: "Billedet kunne ikke gemmes. Prøv igen, eller prøv et andet billede." };
   }
 
   const confirmTo = user?.email || draft.email;
@@ -229,8 +235,8 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
       itemId: item.id,
       itemTitle: draft.title,
       itemType: draft.type,
-      hasAccount: Boolean(user),
-      manageUrl: user ? undefined : manageUrl(item.id),
+      hasAccount: Boolean(ownerId),
+      manageUrl: ownerId ? undefined : manageUrl(item.id),
     });
     after(() => sendMail({ to: confirmTo, ...mail }));
   }

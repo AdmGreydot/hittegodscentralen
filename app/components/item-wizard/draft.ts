@@ -85,6 +85,7 @@ export function validateStep(step: number, draft: ItemDraft): DraftErrors {
     }
     const categoryError = categoryNameError(normalizeCategoryName(draft.category));
     if (categoryError) errors.category = categoryError;
+    if (!draft.image && !draft.imageUrl) errors.image = "Tilføj et billede af genstanden.";
   }
 
   if (step === 2) {
