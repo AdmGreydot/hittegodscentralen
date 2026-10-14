@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
+  // The page for organisations moved from /business; keep old links working.
+  async redirects() {
+    return [{ source: "/business", destination: "/organisationer", permanent: true }];
+  },
   // The logo embedded in every e-mail (lib/mail.ts). Mails are sent from many routes.
   outputFileTracingIncludes: {
     "/**": ["./lib/assets/email-logo.png"],

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Business · Hittegodscentralen",
+  title: "For organisationer · Hittegodscentralen",
   description:
     "Hittegodscentralen for virksomheder og organisationer. Kommer snart.",
 };
@@ -26,8 +26,8 @@ const ORGANISATIONS: { icon: LucideIcon; label: string }[] = [
   { icon: TrainFront, label: "Transport" },
 ];
 
-// Placeholder until the business product is ready.
-export default function BusinessPage() {
+// Placeholder until the product for organisations is ready.
+export default function OrganisationsPage() {
   return (
     <main className="grid flex-1 place-items-center bg-zinc-100 px-4 py-20 sm:px-6 sm:py-28">
       <div className="w-full max-w-2xl rounded-2xl border border-zinc-200/70 bg-white px-6 py-12 text-center sm:px-12 sm:py-16">
@@ -35,7 +35,7 @@ export default function BusinessPage() {
           <Building2 size={30} aria-hidden />
         </span>
         <p className="mt-6 text-sm font-medium uppercase tracking-[0.18em] text-brand-rust">
-          Business
+          For organisationer
         </p>
         <h1 className="mt-2 font-serif text-4xl font-extrabold text-brand-brown sm:text-5xl">
           Kommer snart

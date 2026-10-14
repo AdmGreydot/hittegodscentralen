@@ -13,7 +13,7 @@ import Brand from "./Brand";
 const NAV_LINKS = [
   { href: "/genstande", label: "Genstande" },
   { href: "/om-os", label: "Om os" },
-  { href: "/business", label: "Business" },
+  { href: "/organisationer", label: "For organisationer" },
 ];
 
 const MOBILE_LINKS = [{ href: "/", label: "Forside" }, ...NAV_LINKS];

@@ -23,10 +23,11 @@ function greeting(fullName: string) {
 export const inboxUrl = (conversationId?: string) =>
   `${SITE_URL}/profil?fane=beskeder${conversationId ? `&samtale=${conversationId}` : ""}`;
 
-// The Ejendelsregisteret box at the bottom of some mails (same texts as on the site).
-function nudgeHtml(context: NudgeContext) {
+// The Ejendelsregisteret box in some mails (same texts as on the site). Placed at the bottom
+// by default; `top` is for mails where it sits right under the intro.
+function nudgeHtml(context: NudgeContext, top = false) {
   const copy = NUDGE_COPY[context];
-  return `<div style="margin-top:28px;padding:18px 20px;background:#fdf6e7;border:1px solid #f6dfa8;border-radius:12px;">
+  return `<div style="margin:${top ? "20px 0 24px" : "28px 0 0"};padding:18px 20px;background:#fdf6e7;border:1px solid #f6dfa8;border-radius:12px;">
 <p style="margin:0;font-size:11px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.rust};">Ejendelsregisteret</p>
 <p style="margin:4px 0 0;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:${BRAND.brown};">${escapeHtml(copy.title)}</p>
 <p style="margin:8px 0 14px;font-size:14px;color:${BRAND.brown};">${escapeHtml(copy.text)}</p>
@@ -111,6 +112,28 @@ ${mailButton(link, "Vælg ny adgangskode")}
   };
 }
 
+// To users moved over from the old Hittegodscentralen (scripts/import/users.ts). Their old
+// password couldn't come along, so they choose a new one through the link.
+export function legacyAccountMail(fullName: string, link: string): Mail {
+  const intro =
+    "Hittegodscentralen har fået en ny hjemmeside, og din konto er flyttet med. Af sikkerhedshensyn kunne din gamle adgangskode ikke flyttes, så du skal vælge en ny, før du logger ind.";
+  const news =
+    "På den nye side kan du skrive med findere og tabere i en privat chat, sætte stedet på et kort og få besked på mail, når nogen skriver til dig.";
+  const outro =
+    "Linket virker kun én gang og i en begrænset periode. Er det udløbet, kan du bede om et nyt med \"Glemt adgangskode\", når du logger ind.";
+  return {
+    subject: "Velkommen til den nye Hittegodscentralen: vælg en ny adgangskode",
+    text: `${greeting(fullName)},\n\n${intro}\n\nVælg din nye adgangskode: ${link}\n\n${news}\n\n${outro}`,
+    html: mailHtml(
+      `<p style="margin-top:0;">${escapeHtml(greeting(fullName))},</p>
+<p>${intro}</p>
+${mailButton(link, "Vælg ny adgangskode")}
+<p>${news}</p>
+<p style="font-size:13px;color:#71717a;">${escapeHtml(outro)}</p>`,
+    ),
+  };
+}
+
 export function newMessageMail(input: {
   recipientName: string;
   senderName: string;
@@ -155,22 +178,22 @@ export function itemCreatedMail(input: {
     text: [
       `${greeting(input.fullName)},`,
       intro,
+      nudgeText(nudge),
       next,
       lifetime,
       `Se opslaget: ${link}`,
       input.manageUrl && `${MANAGE_NOTE} ${input.manageUrl}`,
-      nudgeText(nudge),
     ]
       .filter(Boolean)
       .join("\n\n"),
     html: mailHtml(
       `<p style="margin-top:0;">${escapeHtml(greeting(input.fullName))},</p>
 <p>${escapeHtml(intro)}</p>
+${nudgeHtml(nudge, true)}
 <p>${next}</p>
 ${mailButton(link, "Se dit opslag")}
 ${input.manageUrl ? manageHtml(input.manageUrl) : ""}
-<p style="font-size:13px;color:#71717a;">${lifetime}</p>
-${nudgeHtml(nudge)}`,
+<p style="font-size:13px;color:#71717a;">${lifetime}</p>`,
     ),
   };
 }

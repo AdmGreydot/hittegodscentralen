@@ -132,10 +132,10 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Businesses */}
+      {/* Organisations */}
       <section className="px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-5xl">
-          <SectionTitle eyebrow="Business">
+          <SectionTitle eyebrow="For organisationer">
             For både privatpersoner og virksomheder
           </SectionTitle>
           <div className="mt-6 grid gap-5 text-lg leading-relaxed font-light text-zinc-600 lg:grid-cols-2 lg:gap-12">
@@ -172,10 +172,10 @@ export default function AboutPage() {
               finde det, de troede var væk.
             </p>
             <Link
-              href="/business"
+              href="/organisationer"
               className="inline-flex shrink-0 items-center gap-2 font-medium text-brand-brown underline-offset-4 hover:underline"
             >
-              Læs om Business
+              Læs om løsningen til organisationer
               <ArrowRight size={18} aria-hidden />
             </Link>
           </div>
@@ -225,7 +225,7 @@ export default function AboutPage() {
             </p>
             <p className="mt-4 font-serif text-3xl leading-snug font-bold">
               At forbinde mennesker og gøre det nemmere at få tabte og fundne
-              ejendele tilbage til deres rette ejere – gennem en enkel,
+              ejendele tilbage til deres rette ejere gennem en enkel,
               tilgængelig og digital platform.
             </p>
           </div>

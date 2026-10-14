@@ -32,7 +32,9 @@ function toCard(row: ItemRow): ItemCard {
     description: row.description,
     location: row.address ?? row.city,
     occurredAt: row.occurred_at,
-    imageUrl: row.item_images[0] ? imageUrl(row.item_images[0].file_path) : PLACEHOLDER_IMAGE,
+    imageUrl: row.item_images[0]
+      ? imageUrl(row.item_images[0].file_path)
+      : PLACEHOLDER_IMAGE,
   };
 }
 
@@ -91,10 +93,14 @@ export async function searchItems(filters: ItemFilters) {
 
   if (filters.type) query = query.eq("type", filters.type);
   if (filters.regions.length) query = query.in("region", filters.regions);
-  if (filters.municipalities.length) query = query.in("municipality", filters.municipalities);
-  if (filters.categories.length) query = query.in("category_id", filters.categories);
-  if (filters.from) query = query.gte("occurred_at", copenhagenMidnight(filters.from));
-  if (filters.to) query = query.lt("occurred_at", copenhagenMidnight(filters.to, 1));
+  if (filters.municipalities.length)
+    query = query.in("municipality", filters.municipalities);
+  if (filters.categories.length)
+    query = query.in("category_id", filters.categories);
+  if (filters.from)
+    query = query.gte("occurred_at", copenhagenMidnight(filters.from));
+  if (filters.to)
+    query = query.lt("occurred_at", copenhagenMidnight(filters.to, 1));
   if (filters.q) {
     const term = orValue(`%${filters.q}%`);
     query = query.or(
@@ -156,30 +162,46 @@ export async function getItemFacets(): Promise<ItemFacets> {
   const rows = itemsResult.data;
 
   const regionCounts = new Map<string, number>();
-  const municipalities = new Map<string, { count: number; postalCodes: Set<string> }>();
+  const municipalities = new Map<
+    string,
+    { count: number; postalCodes: Set<string> }
+  >();
   const categoryCounts = new Map<number, number>();
 
   for (const row of rows) {
-    if (row.region) regionCounts.set(row.region, (regionCounts.get(row.region) ?? 0) + 1);
+    if (row.region)
+      regionCounts.set(row.region, (regionCounts.get(row.region) ?? 0) + 1);
     if (row.municipality) {
-      const entry = municipalities.get(row.municipality) ?? { count: 0, postalCodes: new Set() };
+      const entry = municipalities.get(row.municipality) ?? {
+        count: 0,
+        postalCodes: new Set(),
+      };
       entry.count++;
       if (row.postal_code) entry.postalCodes.add(row.postal_code);
       municipalities.set(row.municipality, entry);
     }
-    categoryCounts.set(row.category_id, (categoryCounts.get(row.category_id) ?? 0) + 1);
+    categoryCounts.set(
+      row.category_id,
+      (categoryCounts.get(row.category_id) ?? 0) + 1,
+    );
   }
 
-  const byLabel = (a: FacetOption, b: FacetOption) => a.label.localeCompare(b.label, "da");
+  const byLabel = (a: FacetOption, b: FacetOption) =>
+    a.label.localeCompare(b.label, "da");
 
   return {
     total: rows.length,
     lastCreatedAt: rows.reduce<string | null>(
-      (latest, row) => (!latest || row.created_at > latest ? row.created_at : latest),
+      (latest, row) =>
+        !latest || row.created_at > latest ? row.created_at : latest,
       null,
     ),
     regions: [...regionCounts]
-      .map(([value, count]) => ({ value, label: value.replace(/^Region /, ""), count }))
+      .map(([value, count]) => ({
+        value,
+        label: value.replace(/^Region /, ""),
+        count,
+      }))
       .sort(byLabel),
     municipalities: [...municipalities]
       .map(([value, { count, postalCodes }]) => {
@@ -196,7 +218,11 @@ export async function getItemFacets(): Promise<ItemFacets> {
     // Categories users created only show once they have items, so empty ones don't clutter the list.
     categories: categoriesResult.data
       .filter((c) => !c.user_created || categoryCounts.has(c.id))
-      .map((c) => ({ value: String(c.id), label: c.name, count: categoryCounts.get(c.id) ?? 0 }))
+      .map((c) => ({
+        value: String(c.id),
+        label: c.name,
+        count: categoryCounts.get(c.id) ?? 0,
+      }))
       .sort(byLabel),
   };
 }
@@ -221,7 +247,11 @@ export type ItemDetail = {
   images: { url: string; name: string | null }[];
   ownerId: string | null;
   // Public profile of the user who posted it; null when the item wasn't posted by a user.
-  owner: { fullName: string; avatarUrl: string | null; memberSince: string } | null;
+  owner: {
+    fullName: string;
+    avatarUrl: string | null;
+    memberSince: string;
+  } | null;
 };
 
 type ItemDetailRow = {
@@ -244,7 +274,8 @@ type ItemDetailRow = {
   item_images: { file_path: string; file_name: string | null }[];
 };
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // One item with images, category and the owner's public profile. Returns null when it doesn't
 // exist or the viewer isn't allowed to see it (RLS hides non-active items from everyone but the owner).
@@ -267,12 +298,19 @@ export const getItem = cache(async (id: string): Promise<ItemDetail | null> => {
   if (error) throw error;
   if (!data) return null;
 
-  type ProfileRow = { full_name: string; avatar_url: string | null; created_at: string };
+  type ProfileRow = {
+    full_name: string;
+    avatar_url: string | null;
+    created_at: string;
+  };
   let profile: ProfileRow | undefined;
   if (data.user_id) {
-    const { data: profiles, error: profileError } = await supabase.rpc("public_profile", {
-      profile_id: data.user_id,
-    });
+    const { data: profiles, error: profileError } = await supabase.rpc(
+      "public_profile",
+      {
+        profile_id: data.user_id,
+      },
+    );
     if (profileError) throw profileError;
     profile = (profiles as ProfileRow[])[0];
   }
@@ -293,7 +331,10 @@ export const getItem = cache(async (id: string): Promise<ItemDetail | null> => {
     locationExact: data.location_exact,
     occurredAt: data.occurred_at,
     category: data.category,
-    images: data.item_images.map((img) => ({ url: imageUrl(img.file_path), name: img.file_name })),
+    images: data.item_images.map((img) => ({
+      url: imageUrl(img.file_path),
+      name: img.file_name,
+    })),
     ownerId: data.user_id,
     owner: profile
       ? {
@@ -306,7 +347,11 @@ export const getItem = cache(async (id: string): Promise<ItemDetail | null> => {
 });
 
 // Newest active items in the same category, excluding the given item.
-export async function getSimilarItems(categoryId: number, excludeId: string, limit = 3) {
+export async function getSimilarItems(
+  categoryId: number,
+  excludeId: string,
+  limit = 3,
+) {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -336,7 +381,10 @@ export async function getCategories() {
   return data.sort((a, b) => a.name.localeCompare(b.name, "da"));
 }
 
-export type MyItem = ItemCard & { status: ItemDetail["status"]; createdAt: string };
+export type MyItem = ItemCard & {
+  status: ItemDetail["status"];
+  createdAt: string;
+};
 
 // All of a user's own items, every status, newest first, for the profile page.
 export async function getMyItems(userId: string): Promise<MyItem[]> {
@@ -348,9 +396,15 @@ export async function getMyItems(userId: string): Promise<MyItem[]> {
     .order("created_at", { ascending: false })
     .order("created_at", { referencedTable: "item_images", ascending: true })
     .limit(1, { referencedTable: "item_images" })
-    .returns<(ItemRow & { status: ItemDetail["status"]; created_at: string })[]>();
+    .returns<
+      (ItemRow & { status: ItemDetail["status"]; created_at: string })[]
+    >();
   if (error) throw error;
-  return data.map((row) => ({ ...toCard(row), status: row.status, createdAt: row.created_at }));
+  return data.map((row) => ({
+    ...toCard(row),
+    status: row.status,
+    createdAt: row.created_at,
+  }));
 }
 
 // The user's own profile row. Only readable by the user themself (RLS).
