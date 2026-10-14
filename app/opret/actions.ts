@@ -68,9 +68,6 @@ function readDraft(form: FormData, loggedIn: boolean) {
 
   const image = form.get("image");
   const file = image instanceof File && image.size > 0 ? image : null;
-  // Lets the image check pass: a new file, or the existing image kept when editing.
-  draft.image = file;
-  draft.imageUrl = text(form, "keepImage") ? "keep" : null;
 
   // Same checks as the wizard, all steps except the review.
   const errors: DraftErrors = {};
@@ -225,7 +222,7 @@ export async function createItem(form: FormData): Promise<CreateItemResult> {
   if (file && !(await saveImage(supabase, file, item.id, ownerId))) {
     // Don't leave a half-created item behind.
     await supabase.from("items").delete().eq("id", item.id);
-    return { message: "Billedet kunne ikke gemmes. Prøv igen, eller prøv et andet billede." };
+    return { message: "Billedet kunne ikke gemmes. Prøv igen, eller opret uden billede." };
   }
 
   const confirmTo = user?.email || draft.email;
