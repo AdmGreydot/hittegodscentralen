@@ -27,7 +27,7 @@ Alle scripts skal som udgangspunkt køre **uden at skrive noget** og kun vise, h
 | --- | --- |
 | `npm run import:transform` | Læser WordPress-eksporten (de tre `hg-*.json`-filer) og skriver rensede data til `data/out/`: `users.json`, `items.json` og `report.md`. Rører ikke databasen |
 | `npm run import:images` | Henter billederne til opslagene fra den gamle side ned i `data/images/` (kør før domænet flyttes). Kan køres igen; hentede billeder springes over |
-| `npm run import:users` | Opretter gamle brugere uden adgangskode og sender dem en mail om at vælge en ny. Læser `data/out/users.json`. Se kommentaren øverst i `users.ts` for flag |
+| `npm run import:users` | Opretter gamle brugere uden adgangskode. Mailen om at vælge en ny sendes med `scripts/send-legacy-mails.ts`. Læser `data/out/users.json`. Se kommentaren øverst i `users.ts` for flag |
 | `npm run import:load` | Opretter kategorier og opslag fra `data/out/items.json` og uploader billederne fra `data/images/`. Kør `import:users -- --commit` først. Kan genoptages via `data/out/loaded-<projekt>.json` (én fil pr. database) |
 
 ## Den nye database

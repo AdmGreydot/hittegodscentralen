@@ -112,24 +112,27 @@ ${mailButton(link, "Vælg ny adgangskode")}
   };
 }
 
-// To users moved over from the old Hittegodscentralen (scripts/archive/legacy-import/users.ts). Their old
-// password couldn't come along, so they choose a new one through the link.
-export function legacyAccountMail(fullName: string, link: string): Mail {
+// To users moved over from the old Hittegodscentralen (scripts/send-legacy-mails.ts). Their old
+// password couldn't come along. The button goes to a page where they ask for a "vælg ny
+// adgangskode" link themselves, so it works no matter how long the mail sits unread.
+export const LEGACY_WELCOME_URL = `${SITE_URL}/nulstil-adgangskode?ny=1`;
+
+export function legacyAccountMail(fullName: string): Mail {
   const intro =
     "Hittegodscentralen har fået en ny hjemmeside, og din konto er flyttet med. Af sikkerhedshensyn kunne din gamle adgangskode ikke flyttes, så du skal vælge en ny, før du logger ind.";
+  const how =
+    "Klik på knappen og skriv din e-mail. Så sender vi dig et link, hvor du vælger din nye adgangskode. Brug den e-mail, som denne mail er sendt til.";
   const news =
     "På den nye side kan du skrive med findere og tabere i en privat chat, sætte stedet på et kort og få besked på mail, når nogen skriver til dig.";
-  const outro =
-    "Linket virker kun én gang og i en begrænset periode. Er det udløbet, kan du bede om et nyt med \"Glemt adgangskode\", når du logger ind.";
   return {
     subject: "Velkommen til den nye Hittegodscentralen: vælg en ny adgangskode",
-    text: `${greeting(fullName)},\n\n${intro}\n\nVælg din nye adgangskode: ${link}\n\n${news}\n\n${outro}`,
+    text: `${greeting(fullName)},\n\n${intro}\n\n${how}\n\nVælg din nye adgangskode: ${LEGACY_WELCOME_URL}\n\n${news}`,
     html: mailHtml(
       `<p style="margin-top:0;">${escapeHtml(greeting(fullName))},</p>
 <p>${intro}</p>
-${mailButton(link, "Vælg ny adgangskode")}
-<p>${news}</p>
-<p style="font-size:13px;color:#71717a;">${escapeHtml(outro)}</p>`,
+<p>${how}</p>
+${mailButton(LEGACY_WELCOME_URL, "Vælg ny adgangskode")}
+<p>${news}</p>`,
     ),
   };
 }

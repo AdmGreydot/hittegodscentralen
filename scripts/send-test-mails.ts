@@ -41,7 +41,7 @@ const sender = {
 const mails: [string, Mail][] = [
   ["Bekræft e-mail", confirmEmailMail(NAME, `${SITE_URL}/auth/confirm?token_hash=test&type=signup&next=/profil`)],
   ["Velkomst", welcomeMail(NAME)],
-  ["Gammel bruger: vælg ny adgangskode", legacyAccountMail(NAME, `${SITE_URL}/auth/confirm?token_hash=test&type=recovery&next=/nulstil-adgangskode`)],
+  ["Gammel bruger: vælg ny adgangskode", legacyAccountMail(NAME)],
   ["Nulstil adgangskode", resetPasswordMail(NAME, `${SITE_URL}/auth/confirm?token_hash=test&type=recovery&next=/nulstil-adgangskode`)],
   ["Ny besked", newMessageMail({ recipientName: NAME, senderName: sender.name, itemTitle: "JBL højtaler", body: sender.message, conversationId: CONVERSATION_ID })],
   ["Opslag oprettet (med profil)", itemCreatedMail({ fullName: NAME, itemId: ITEM_ID, itemTitle: "JBL højtaler", itemType: "lost", hasAccount: true })],

@@ -6,7 +6,7 @@ import { PASSWORD_HINT, type AuthResult } from "../auth/validation";
 import { useAuthModal } from "../components/auth/AuthModal";
 import { AuthInput, FormMessage, SubmitButton } from "../components/auth/fields";
 
-export default function ResetPasswordForm({ expired }: { expired: boolean }) {
+export default function ResetPasswordForm({ expired, legacy }: { expired: boolean; legacy: boolean }) {
   const openAuth = useAuthModal();
   const [result, setResult] = useState<AuthResult>({});
   const [pending, startTransition] = useTransition();
@@ -18,7 +18,7 @@ export default function ResetPasswordForm({ expired }: { expired: boolean }) {
         onClick={() => openAuth("forgot")}
         className="flex h-12 w-full items-center justify-center rounded-xl bg-brand-rust font-medium text-white transition-colors hover:bg-brand-rust/90"
       >
-        Send mig et nyt link
+        {legacy ? "Send mig et link" : "Send mig et nyt link"}
       </button>
     );
   }

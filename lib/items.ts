@@ -77,7 +77,8 @@ export async function getLatestItems(limit: number, type?: ItemType) {
   return data.map(toCard);
 }
 
-// Filtered, paginated active items for /genstande.
+// Filtered, paginated active items for /genstande, newest first by the date shown on the cards
+// (when it was lost or found); items from the same day by when they were posted.
 export async function searchItems(filters: ItemFilters) {
   const supabase = await createClient();
   const start = (filters.page - 1) * filters.perPage;
@@ -86,6 +87,7 @@ export async function searchItems(filters: ItemFilters) {
     .from("items")
     .select(CARD_COLUMNS, { count: "exact" })
     .eq("status", "active")
+    .order("occurred_at", { ascending: false })
     .order("created_at", { ascending: false })
     .order("created_at", { referencedTable: "item_images", ascending: true })
     .limit(1, { referencedTable: "item_images" })
