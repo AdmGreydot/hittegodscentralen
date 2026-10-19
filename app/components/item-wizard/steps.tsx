@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Heart,
   ImagePlus,
@@ -13,7 +13,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { CATEGORY_MAX_LENGTH, normalizeCategoryName, sameCategory } from "../../../lib/category-name";
-import { reverseGeocode } from "../../../lib/geo";
+import { geocodeAddress, reverseGeocode } from "../../../lib/geo";
 import LazyMap, { type MapPoint } from "../map/LazyMap";
 import { formatDate, type ItemType } from "../../../lib/item-card";
 import {
@@ -269,7 +269,10 @@ function ImagePicker({
 
 // Editing the address by hand means the exact point no longer matches it, so drop it.
 const CLEAR_POINT = { latitude: null, longitude: null };
-const CLEAR_LOCATION = { region: "", city: "", postalCode: "", address: "", ...CLEAR_POINT };
+
+// Wait this long after the last keystroke before looking up the typed place (Nominatim allows
+// at most one request per second).
+const GEOCODE_DELAY_MS = 1000;
 
 // Above this GPS uncertainty (typical for laptops locating by Wi-Fi/IP), a street address
 // would be a guess, so only the area is filled in.
@@ -281,47 +284,94 @@ const GEO_ERRORS: Record<number, string> = {
   3: "Det tog for lang tid at finde din placering. Udfyld felterne herunder, eller prøv igen.",
 };
 
-type LocationMethod = "gps" | "manual";
-
 export function LocationStep({ draft, errors, update }: StepProps) {
-  // Coming back to the step with a place filled in: show the fields straight away.
-  const [method, setMethod] = useState<LocationMethod | null>(() =>
-    draft.latitude != null ? "gps" : draft.region || draft.city || draft.postalCode ? "manual" : null,
+  // First visit with no place yet: ask how to fill it in. Coming back with a place, the fields
+  // are already filled, so don't ask again.
+  const [asking, setAsking] = useState(
+    () => draft.latitude == null && !draft.region && !draft.city && !draft.postalCode && !draft.address,
   );
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  // Where the typed place is on the map when it isn't an exact point (only the postal code or
+  // city was found). Only shown on the map; the server works out that centre itself on save.
+  const [area, setArea] = useState<MapPoint | null>(null);
+  // The last pin, kept on the map while a typed change is looked up, so it doesn't blink away.
+  const [heldPin, setHeldPin] = useState<MapPoint | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const fieldsRef = useRef<HTMLDivElement>(null);
+  const geocodeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const geocodeAbort = useRef<AbortController>(undefined);
 
-  const locationError = errors.region || errors.city || errors.postalCode || errors.address;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !asking || dialog.open) return;
+    dialog.showModal();
+  }, [asking]);
+
+  // Coming back to the step (or editing) with a typed place but no exact point: show its area.
+  useEffect(() => {
+    if (draft.latitude == null && (draft.address || draft.postalCode || draft.city)) scheduleGeocode(draft);
+    return cancelGeocode;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function cancelGeocode() {
+    clearTimeout(geocodeTimer.current);
+    geocodeAbort.current?.abort();
+  }
+
+  // Looks up the typed place shortly after the user stops typing and moves the pin there.
+  function scheduleGeocode(place: Pick<ItemDraft, "address" | "postalCode" | "city">) {
+    cancelGeocode();
+    geocodeTimer.current = setTimeout(async () => {
+      const controller = new AbortController();
+      geocodeAbort.current = controller;
+      const found = await geocodeAddress(place, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      setHeldPin(null);
+      if (found?.exact) {
+        update({ latitude: found.latitude, longitude: found.longitude });
+        setArea(null);
+      } else {
+        setArea(found);
+      }
+    }, GEOCODE_DELAY_MS);
+  }
+
+  // A typed change to city, postal code or address: the old point no longer matches.
+  function editPlace(patch: Partial<Pick<ItemDraft, "address" | "postalCode" | "city">>) {
+    if (draft.latitude != null && draft.longitude != null) {
+      setHeldPin({ latitude: draft.latitude, longitude: draft.longitude });
+    }
+    update({ ...patch, ...CLEAR_POINT });
+    scheduleGeocode({ address: draft.address, postalCode: draft.postalCode, city: draft.city, ...patch });
+  }
+
+  function closeDialog() {
+    dialogRef.current?.close();
+  }
 
   function focusFirstField() {
     requestAnimationFrame(() => fieldsRef.current?.querySelector<HTMLElement>("select, input")?.focus());
   }
 
   function chooseManual() {
-    // Values filled in from the GPS are cleared, so the user types their own.
-    if (method === "gps" || draft.latitude != null) update(CLEAR_LOCATION);
-    setMethod("manual");
     setMessage(null);
-    focusFirstField();
-  }
-
-  // "Ret" on the GPS result: edit the found place instead of starting over.
-  function editFoundPlace() {
-    setMethod("manual");
-    setMessage(null);
+    closeDialog();
     focusFirstField();
   }
 
   function fallBackToManual(text: string) {
     setLocating(false);
-    setMethod("manual");
     setMessage({ text, error: true });
+    closeDialog();
     focusFirstField();
   }
 
   // Clicked the map or dragged the pin: look up that spot and fill in the fields from it.
   async function pickOnMap({ latitude, longitude }: MapPoint) {
+    cancelGeocode();
+    setArea(null);
+    setHeldPin(null);
     update({ latitude, longitude });
     setMessage(null);
     const place = await reverseGeocode(latitude, longitude);
@@ -338,17 +388,18 @@ export function LocationStep({ draft, errors, update }: StepProps) {
       latitude,
       longitude,
     });
-    setMethod("gps");
     setMessage({
       text: place.address ? "Stedet er sat ud fra kortet." : "Området er sat ud fra kortet. Tilføj gerne fx en station eller park.",
       error: false,
     });
   }
 
+  // Finds the user's position and fills in the fields from it; they stay editable afterwards.
   function chooseGps() {
     if (!("geolocation" in navigator)) {
       return fallBackToManual("Din browser kan ikke dele placering. Udfyld felterne herunder i stedet.");
     }
+    cancelGeocode();
     setLocating(true);
     setMessage(null);
 
@@ -371,14 +422,16 @@ export function LocationStep({ draft, errors, update }: StepProps) {
           latitude: coords.latitude,
           longitude: coords.longitude,
         });
+        setArea(null);
+        setHeldPin(null);
         setLocating(false);
-        setMethod("gps");
         setMessage({
           text: address
-            ? `Fundet ud fra din placering (±${Math.round(coords.accuracy)} m).`
+            ? `Udfyldt ud fra din placering (±${Math.round(coords.accuracy)} m). Ret gerne felterne.`
             : "Vi fandt området, men ikke et præcist sted. Tilføj gerne fx en station eller park.",
           error: false,
         });
+        closeDialog();
       },
       (err) => fallBackToManual(GEO_ERRORS[err.code] ?? GEO_ERRORS[2]),
       { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
@@ -389,29 +442,68 @@ export function LocationStep({ draft, errors, update }: StepProps) {
     <>
       <StepHeading title="Lokation & tidspunkt" subtitle="Hvor og hvornår skete det?" />
 
-      <div role="radiogroup" aria-label="Angiv sted" className="grid gap-3 sm:grid-cols-2">
-        <MethodButton
-          selected={method === "gps"}
+      <dialog
+        ref={dialogRef}
+        aria-labelledby="location-method-title"
+        onClose={() => setAsking(false)}
+        // A click on the dialog element itself is a click on the backdrop around the card.
+        onClick={(e) => e.target === e.currentTarget && chooseManual()}
+        className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl bg-white p-0 shadow-2xl backdrop:bg-black/55 backdrop:backdrop-blur-[2px]"
+      >
+        <div className="relative px-6 pt-10 pb-8 sm:px-8">
+          <button
+            type="button"
+            onClick={chooseManual}
+            className="absolute top-4 right-4 grid size-9 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-brand-black"
+            aria-label="Luk"
+          >
+            <X size={20} aria-hidden />
+          </button>
+          <h2 id="location-method-title" className="font-serif text-2xl font-bold text-brand-black">
+            Hvor skete det?
+          </h2>
+          <p className="mt-1 font-light text-zinc-500">
+            Vi kan udfylde stedet ud fra hvor du er nu. Du kan altid rette det bagefter.
+          </p>
+          <div className="mt-6 grid gap-3">
+            <MethodButton
+              onClick={chooseGps}
+              disabled={locating}
+              icon={
+                locating ? (
+                  <Loader2 size={20} className="animate-spin" aria-hidden />
+                ) : (
+                  <LocateFixed size={20} aria-hidden />
+                )
+              }
+              title={locating ? "Finder din placering..." : "Brug min lokation"}
+              hint="Udfyld automatisk ud fra hvor du er"
+            />
+            <MethodButton
+              onClick={chooseManual}
+              disabled={locating}
+              icon={<PencilLine size={20} aria-hidden />}
+              title="Udfyld manuelt"
+              hint="Skriv region, by og sted selv"
+            />
+          </div>
+        </div>
+      </dialog>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
           onClick={chooseGps}
           disabled={locating}
-          icon={
-            locating ? (
-              <Loader2 size={20} className="animate-spin" aria-hidden />
-            ) : (
-              <LocateFixed size={20} aria-hidden />
-            )
-          }
-          title={locating ? "Finder din placering..." : "Brug min lokation"}
-          hint="Udfyld automatisk ud fra hvor du er"
-        />
-        <MethodButton
-          selected={method === "manual"}
-          onClick={chooseManual}
-          disabled={locating}
-          icon={<PencilLine size={20} aria-hidden />}
-          title="Tilføj manuelt"
-          hint="Skriv region, by og sted selv"
-        />
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-brown underline-offset-2 hover:underline disabled:cursor-wait disabled:opacity-60"
+        >
+          {locating ? (
+            <Loader2 size={16} className="animate-spin" aria-hidden />
+          ) : (
+            <LocateFixed size={16} aria-hidden />
+          )}
+          {locating ? "Finder din placering..." : "Brug min lokation"}
+        </button>
       </div>
 
       {message && (
@@ -423,96 +515,64 @@ export function LocationStep({ draft, errors, update }: StepProps) {
         </p>
       )}
 
-      {/* Pressed "Næste" without choosing how to give the place. */}
-      {locationError && method !== "manual" && (
-        <p className="mt-3 text-sm text-brand-rust">
-          Vælg om du vil bruge din lokation eller tilføje stedet manuelt.
-        </p>
-      )}
-
-      {/* GPS: a compact summary instead of input fields. */}
-      {method === "gps" && (
-        <div className="mt-4 flex items-start gap-3 rounded-xl bg-zinc-100 px-4 py-3">
-          <MapPin size={18} className="mt-0.5 shrink-0 text-brand-brown" aria-hidden />
-          <div className="min-w-0 flex-1 text-sm">
-            <p className="font-medium text-brand-black">
-              {draft.address || "Intet præcist sted"}
-            </p>
-            <p className="text-zinc-500">
-              {[draft.postalCode, draft.city].filter(Boolean).join(" ")}
-              {draft.region && ` · ${draft.region.replace(/^Region /, "")}`}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={editFoundPlace}
-            className="shrink-0 text-sm font-medium text-brand-brown underline-offset-2 hover:underline"
-          >
-            {draft.address ? "Ret" : "Tilføj sted"}
-          </button>
-        </div>
-      )}
-
-      {method === "manual" && (
-        <div ref={fieldsRef} className="mt-6">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Region" required error={errors.region}>
-              {(a11y) => (
-                <Select
-                  {...a11y}
-                  value={draft.region}
-                  onChange={(e) => update({ region: e.target.value })}
-                  required
-                >
-                  <option value="" disabled>
-                    Vælg region
+      <div ref={fieldsRef} className="mt-4">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Region" required error={errors.region}>
+            {(a11y) => (
+              <Select
+                {...a11y}
+                value={draft.region}
+                onChange={(e) => update({ region: e.target.value })}
+                required
+              >
+                <option value="" disabled>
+                  Vælg region
+                </option>
+                {REGIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r.replace(/^Region /, "")}
                   </option>
-                  {REGIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r.replace(/^Region /, "")}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-            <Field label="By" error={errors.city}>
-              {(a11y) => (
-                <TextInput
-                  {...a11y}
-                  value={draft.city}
-                  onChange={(e) => update({ city: e.target.value, ...CLEAR_POINT })}
-                  autoComplete="address-level2"
-                />
-              )}
-            </Field>
-          </div>
-
-          <div className="mt-5 grid gap-5 sm:grid-cols-[1fr_2fr]">
-            <Field label="Postnummer" error={errors.postalCode}>
-              {(a11y) => (
-                <TextInput
-                  {...a11y}
-                  value={draft.postalCode}
-                  onChange={(e) => update({ postalCode: e.target.value, ...CLEAR_POINT })}
-                  inputMode="numeric"
-                  maxLength={4}
-                  autoComplete="postal-code"
-                />
-              )}
-            </Field>
-            <Field label="Præcis adresse / sted" error={errors.address}>
-              {(a11y) => (
-                <TextInput
-                  {...a11y}
-                  value={draft.address}
-                  onChange={(e) => update({ address: e.target.value, ...CLEAR_POINT })}
-                  placeholder="Fx Østerbro, bus 1A"
-                />
-              )}
-            </Field>
-          </div>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field label="By" error={errors.city}>
+            {(a11y) => (
+              <TextInput
+                {...a11y}
+                value={draft.city}
+                onChange={(e) => editPlace({ city: e.target.value })}
+                autoComplete="address-level2"
+              />
+            )}
+          </Field>
         </div>
-      )}
+
+        <div className="mt-5 grid gap-5 sm:grid-cols-[1fr_2fr]">
+          <Field label="Postnummer" error={errors.postalCode}>
+            {(a11y) => (
+              <TextInput
+                {...a11y}
+                value={draft.postalCode}
+                onChange={(e) => editPlace({ postalCode: e.target.value })}
+                inputMode="numeric"
+                maxLength={4}
+                autoComplete="postal-code"
+              />
+            )}
+          </Field>
+          <Field label="Præcis adresse / sted" error={errors.address}>
+            {(a11y) => (
+              <TextInput
+                {...a11y}
+                value={draft.address}
+                onChange={(e) => editPlace({ address: e.target.value })}
+                placeholder="Fx Østerbro, bus 1A"
+              />
+            )}
+          </Field>
+        </div>
+      </div>
 
       <Field
         label={draft.type === "found" ? "Dato for fund" : "Dato for tab"}
@@ -538,8 +598,9 @@ export function LocationStep({ draft, errors, update }: StepProps) {
             point={
               draft.latitude != null && draft.longitude != null
                 ? { latitude: draft.latitude, longitude: draft.longitude }
-                : null
+                : (heldPin ?? area)
             }
+            exact={draft.latitude != null || heldPin != null}
             onPick={pickOnMap}
             label="Kort. Klik for at vælge stedet"
           />
@@ -553,14 +614,12 @@ export function LocationStep({ draft, errors, update }: StepProps) {
 }
 
 function MethodButton({
-  selected,
   onClick,
   disabled,
   icon,
   title,
   hint,
 }: {
-  selected: boolean;
   onClick: () => void;
   disabled: boolean;
   icon: React.ReactNode;
@@ -570,21 +629,11 @@ function MethodButton({
   return (
     <button
       type="button"
-      role="radio"
-      aria-checked={selected}
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center gap-4 rounded-xl border-2 px-4 py-4 text-left transition-colors disabled:cursor-wait ${
-        selected
-          ? "border-brand-brown bg-brand-brown/5"
-          : "border-zinc-200 hover:border-zinc-300"
-      }`}
+      className="flex items-center gap-4 rounded-xl border-2 border-zinc-200 px-4 py-4 text-left transition-colors hover:border-brand-brown/40 hover:bg-brand-brown/5 disabled:cursor-wait"
     >
-      <span
-        className={`grid size-11 shrink-0 place-items-center rounded-lg ${
-          selected ? "bg-brand-brown text-white" : "bg-zinc-100 text-brand-brown"
-        }`}
-      >
+      <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-zinc-100 text-brand-brown">
         {icon}
       </span>
       <span>
