@@ -115,7 +115,7 @@ export default function MapView({
     const lngLat: [number, number] = [point.longitude, point.latitude];
 
     if (exact) {
-      const marker = new maplibregl.Marker({ color: RUST, draggable: pickable }).setLngLat(lngLat).addTo(map);
+      const marker = new maplibregl.Marker({ color: RUST, draggable: pickable, anchor: "bottom" }).setLngLat(lngLat).addTo(map);
       marker.on("dragend", () => {
         const { lat, lng } = marker.getLngLat();
         onPickRef.current?.({ latitude: lat, longitude: lng });
