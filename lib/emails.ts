@@ -31,14 +31,14 @@ function nudgeHtml(context: NudgeContext, top = false) {
 <p style="margin:0;font-size:11px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.rust};">Ejendelsregisteret</p>
 <p style="margin:4px 0 0;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:${BRAND.brown};">${escapeHtml(copy.title)}</p>
 <p style="margin:8px 0 14px;font-size:14px;color:${BRAND.brown};">${escapeHtml(copy.text)}</p>
-<a href="${escapeHtml(ejendelsregisteretUrl(context, "email"))}" style="display:inline-block;background:${BRAND.brown};color:#fff;text-decoration:none;font-weight:bold;font-size:14px;padding:10px 18px;border-radius:10px;">Registrér dine ting</a>
+<a href="${escapeHtml(ejendelsregisteretUrl(context, "email", "/se-hvordan"))}" style="display:inline-block;background:${BRAND.brown};color:#fff;text-decoration:none;font-weight:bold;font-size:14px;padding:10px 18px;border-radius:10px;">Se hvordan</a>
 <p style="margin:10px 0 0;font-size:12px;color:#8a7a6e;">${NUDGE_PRICE}</p>
 </div>`;
 }
 
 function nudgeText(context: NudgeContext) {
   const copy = NUDGE_COPY[context];
-  return `${copy.title}: ${copy.text} Registrér dine ting på Ejendelsregisteret: ${ejendelsregisteretUrl(context, "email")}`;
+  return `${copy.title}: ${copy.text} Se hvordan på Ejendelsregisteret: ${ejendelsregisteretUrl(context, "email", "/se-hvordan")}`;
 }
 
 // Posters without an account manage their item through a signed link in their mails.
