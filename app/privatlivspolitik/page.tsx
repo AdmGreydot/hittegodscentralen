@@ -45,7 +45,7 @@ const SECTIONS: LegalSection[] = [
         </p>
         <h3>Når du opretter et opslag</h3>
         <p>
-          Titel, beskrivelse, kategori, billede, dato og sted (region, by,
+          Titel, beskrivelse, billede, dato og sted (region, by,
           postnummer og evt. adresse eller et punkt på kortet). Opretter du
           opslaget uden profil, gemmer vi også din e-mail, så vi kan sende
           beskeder videre til dig.

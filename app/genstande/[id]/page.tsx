@@ -11,7 +11,6 @@ import {
   Mailbox,
   MapPin,
   Navigation,
-  Tag,
 } from "lucide-react";
 import { getCurrentUserId } from "../../../lib/auth";
 import { getItem, getSimilarItems, type ItemDetail } from "../../../lib/items";
@@ -83,7 +82,6 @@ export default async function ItemPage({
       : place || [item.postalCode, item.city].filter(Boolean).join(" ");
 
   const details: { icon: LucideIcon; label: string; value: string | null }[] = [
-    { icon: Tag, label: "Kategori", value: item.category?.name ?? null },
     { icon: MapPin, label: "Region", value: item.region?.replace(/^Region /, "") ?? null },
     { icon: Building2, label: "By", value: item.city },
     { icon: Mailbox, label: "Postnummer", value: item.postalCode },

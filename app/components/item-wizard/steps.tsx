@@ -12,9 +12,7 @@ import {
   X,
   ZoomIn,
 } from "lucide-react";
-import { CATEGORY_MAX_LENGTH, normalizeCategoryName, sameCategory } from "../../../lib/category-name";
 import { geocodeAddress, reverseGeocode } from "../../../lib/geo";
-import LazyMap, { type MapPoint } from "../map/LazyMap";
 import { formatDate, type ItemType } from "../../../lib/item-card";
 import {
   MAX_IMAGE_BYTES,
@@ -23,7 +21,7 @@ import {
   type DraftErrors,
   type ItemDraft,
 } from "./draft";
-import { ComboBox, Field, Select, StepHeading, TextArea, TextInput } from "./fields";
+import { Field, Select, StepHeading, TextArea, TextInput } from "./fields";
 import { isHeicFile, resizeImage } from "./resizeImage";
 
 type StepProps = {
@@ -31,8 +29,6 @@ type StepProps = {
   errors: DraftErrors;
   update: (patch: Partial<ItemDraft>) => void;
 };
-
-type Category = { id: number; name: string };
 
 // --- 1. Type -----------------------------------------------------------------
 
@@ -103,8 +99,7 @@ export function DetailsStep({
   draft,
   errors,
   update,
-  categories,
-}: StepProps & { categories: Category[] }) {
+}: StepProps) {
   return (
     <>
       <StepHeading
@@ -134,51 +129,9 @@ export function DetailsStep({
             />
           )}
         </Field>
-        <CategoryField
-          value={draft.category}
-          onChange={(category) => update({ category })}
-          categories={categories}
-          error={errors.category}
-        />
         <ImagePicker draft={draft} update={update} error={errors.image} />
       </div>
     </>
-  );
-}
-
-// Category: pick an existing one from the dropdown or type a new one. A new name is shown the way
-// it will be saved (trimmed, capital first letter); the server cleans and checks it again.
-function CategoryField({
-  value,
-  onChange,
-  categories,
-  error,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  categories: Category[];
-  error?: string;
-}) {
-  const name = normalizeCategoryName(value);
-  const isNew = name.length >= 2 && !categories.some((c) => sameCategory(c.name, name));
-
-  return (
-    <Field label="Kategori" required error={error} hint="Vælg fra listen, eller skriv en ny kategori.">
-      {(a11y) => (
-        <ComboBox
-          {...a11y}
-          value={value}
-          onChange={onChange}
-          options={categories.map((c) => c.name)}
-          matches={sameCategory}
-          createLabel={isNew ? `Opret ny kategori: ${name}` : null}
-          // Tidy up when leaving the field, so the input shows what will be saved.
-          onBlur={() => value && onChange(name)}
-          placeholder="Fx Elektronik, Nøgler, Cykel"
-          maxLength={CATEGORY_MAX_LENGTH + 10}
-        />
-      )}
-    </Field>
   );
 }
 
@@ -292,11 +245,6 @@ export function LocationStep({ draft, errors, update }: StepProps) {
   );
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-  // Where the typed place is on the map when it isn't an exact point (only the postal code or
-  // city was found). Only shown on the map; the server works out that centre itself on save.
-  const [area, setArea] = useState<MapPoint | null>(null);
-  // The last pin, kept on the map while a typed change is looked up, so it doesn't blink away.
-  const [heldPin, setHeldPin] = useState<MapPoint | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const fieldsRef = useRef<HTMLDivElement>(null);
   const geocodeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -308,7 +256,7 @@ export function LocationStep({ draft, errors, update }: StepProps) {
     dialog.showModal();
   }, [asking]);
 
-  // Coming back to the step (or editing) with a typed place but no exact point: show its area.
+  // Coming back to the step (or editing) with a typed place but no exact point: look it up.
   useEffect(() => {
     if (draft.latitude == null && (draft.address || draft.postalCode || draft.city)) scheduleGeocode(draft);
     return cancelGeocode;
@@ -319,7 +267,7 @@ export function LocationStep({ draft, errors, update }: StepProps) {
     geocodeAbort.current?.abort();
   }
 
-  // Looks up the typed place shortly after the user stops typing and moves the pin there.
+  // Looks up the typed place shortly after the user stops typing and keeps its exact point.
   function scheduleGeocode(place: Pick<ItemDraft, "address" | "postalCode" | "city">) {
     cancelGeocode();
     geocodeTimer.current = setTimeout(async () => {
@@ -327,21 +275,12 @@ export function LocationStep({ draft, errors, update }: StepProps) {
       geocodeAbort.current = controller;
       const found = await geocodeAddress(place, { signal: controller.signal });
       if (controller.signal.aborted) return;
-      setHeldPin(null);
-      if (found?.exact) {
-        update({ latitude: found.latitude, longitude: found.longitude });
-        setArea(null);
-      } else {
-        setArea(found);
-      }
+      if (found?.exact) update({ latitude: found.latitude, longitude: found.longitude });
     }, GEOCODE_DELAY_MS);
   }
 
   // A typed change to city, postal code or address: the old point no longer matches.
   function editPlace(patch: Partial<Pick<ItemDraft, "address" | "postalCode" | "city">>) {
-    if (draft.latitude != null && draft.longitude != null) {
-      setHeldPin({ latitude: draft.latitude, longitude: draft.longitude });
-    }
     update({ ...patch, ...CLEAR_POINT });
     scheduleGeocode({ address: draft.address, postalCode: draft.postalCode, city: draft.city, ...patch });
   }
@@ -365,33 +304,6 @@ export function LocationStep({ draft, errors, update }: StepProps) {
     setMessage({ text, error: true });
     closeDialog();
     focusFirstField();
-  }
-
-  // Clicked the map or dragged the pin: look up that spot and fill in the fields from it.
-  async function pickOnMap({ latitude, longitude }: MapPoint) {
-    cancelGeocode();
-    setArea(null);
-    setHeldPin(null);
-    update({ latitude, longitude });
-    setMessage(null);
-    const place = await reverseGeocode(latitude, longitude);
-    if (!place) {
-      update(CLEAR_POINT);
-      setMessage({ text: "Vælg et sted i Danmark.", error: true });
-      return;
-    }
-    update({
-      region: place.region ?? "",
-      city: place.city,
-      postalCode: place.postalCode,
-      address: place.address ?? "",
-      latitude,
-      longitude,
-    });
-    setMessage({
-      text: place.address ? "Stedet er sat ud fra kortet." : "Området er sat ud fra kortet. Tilføj gerne fx en station eller park.",
-      error: false,
-    });
   }
 
   // Finds the user's position and fills in the fields from it; they stay editable afterwards.
@@ -422,8 +334,6 @@ export function LocationStep({ draft, errors, update }: StepProps) {
           latitude: coords.latitude,
           longitude: coords.longitude,
         });
-        setArea(null);
-        setHeldPin(null);
         setLocating(false);
         setMessage({
           text: address
@@ -591,24 +501,6 @@ export function LocationStep({ draft, errors, update }: StepProps) {
         )}
       </Field>
 
-      <div className="mt-6">
-        <p className="mb-2 text-sm font-medium text-brand-black">Sæt stedet på kortet</p>
-        <div className="h-64 overflow-hidden rounded-xl border border-zinc-200 sm:h-72">
-          <LazyMap
-            point={
-              draft.latitude != null && draft.longitude != null
-                ? { latitude: draft.latitude, longitude: draft.longitude }
-                : (heldPin ?? area)
-            }
-            exact={draft.latitude != null || heldPin != null}
-            onPick={pickOnMap}
-            label="Kort. Klik for at vælge stedet"
-          />
-        </div>
-        <p className="mt-1.5 text-xs text-zinc-400">
-          Klik på kortet, eller træk nålen, for at angive stedet præcist.
-        </p>
-      </div>
     </>
   );
 }
@@ -690,13 +582,11 @@ export function ContactStep({ draft, errors, update }: StepProps) {
 
 export function ReviewStep({ draft }: { draft: ItemDraft }) {
   const image = draft.imagePreview ?? draft.imageUrl;
-  const category = normalizeCategoryName(draft.category);
   const typeLabel = draft.type === "found" ? "Fundet" : "Tabt";
   const place = [draft.address, draft.postalCode].filter(Boolean).join(" · ");
 
   const rows: [string, string | undefined][] = [
     ["Type", typeLabel],
-    ["Kategori", category],
     ["Region", draft.region.replace(/^Region /, "")],
     ["By", [draft.city, draft.postalCode].filter(Boolean).join(", ")],
     ["Dato", draft.occurredOn ? formatDate(`${draft.occurredOn}T12:00:00`) : undefined],
@@ -726,11 +616,6 @@ export function ReviewStep({ draft }: { draft: ItemDraft }) {
             >
               {typeLabel}
             </span>
-            {category && (
-              <span className="rounded-full border border-zinc-200 px-3 py-0.5 text-xs text-zinc-500">
-                {category}
-              </span>
-            )}
           </div>
           <h3 className="mt-3 font-serif text-xl font-bold text-brand-black">{draft.title}</h3>
           <p className="mt-1 font-light whitespace-pre-line text-zinc-500">{draft.description}</p>

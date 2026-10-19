@@ -36,7 +36,6 @@ export default function FilterSidebar({ facets }: { facets: ItemFacets }) {
     (filters.type ? 1 : 0) +
     filters.regions.length +
     filters.municipalities.length +
-    filters.categories.length +
     (filters.from || filters.to ? 1 : 0);
 
   return (
@@ -94,7 +93,7 @@ export default function FilterSidebar({ facets }: { facets: ItemFacets }) {
           />
         </FilterSection>
 
-        <FilterSection title="By / postnummer">
+        <FilterSection title="By / postnummer" last>
           <SearchableCheckboxList
             options={facets.municipalities}
             selected={filters.municipalities}
@@ -106,17 +105,6 @@ export default function FilterSidebar({ facets }: { facets: ItemFacets }) {
           />
         </FilterSection>
 
-        <FilterSection title="Kategori" last>
-          <SearchableCheckboxList
-            options={facets.categories}
-            selected={filters.categories.map(String)}
-            onToggle={(value) =>
-              setFilters({ categories: toggle(filters.categories, Number(value)) })
-            }
-            placeholder="Søg kategori..."
-            emptyLabel="Ingen kategorier matcher"
-          />
-        </FilterSection>
       </div>
     </aside>
   );

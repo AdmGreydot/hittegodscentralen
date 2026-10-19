@@ -6,7 +6,6 @@ export type ItemFilters = {
   type: ItemType | null;
   regions: string[];
   municipalities: string[];
-  categories: number[];
   from: string | null; // YYYY-MM-DD, compared against occurred_at
   to: string | null; // YYYY-MM-DD, inclusive
   page: number;
@@ -41,7 +40,6 @@ export function parseFilters(params: SearchParams): ItemFilters {
     type: type === "lost" || type === "found" ? type : null,
     regions: all(params.region),
     municipalities: all(params.kommune),
-    categories: all(params.kategori).map(Number).filter(Number.isInteger),
     from: from && DATE_RE.test(from) ? from : null,
     to: to && DATE_RE.test(to) ? to : null,
     page: Number.isInteger(page) && page > 1 ? page : 1,
@@ -55,7 +53,6 @@ export function filtersToQuery(filters: ItemFilters) {
   if (filters.type) params.set("type", filters.type);
   filters.regions.forEach((r) => params.append("region", r));
   filters.municipalities.forEach((m) => params.append("kommune", m));
-  filters.categories.forEach((c) => params.append("kategori", String(c)));
   if (filters.from) params.set("fra", filters.from);
   if (filters.to) params.set("til", filters.to);
   if (filters.perPage !== DEFAULT_PER_PAGE)
@@ -70,7 +67,6 @@ export const EMPTY_FILTERS: ItemFilters = {
   type: null,
   regions: [],
   municipalities: [],
-  categories: [],
   from: null,
   to: null,
   page: 1,
