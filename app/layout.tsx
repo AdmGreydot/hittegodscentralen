@@ -5,7 +5,7 @@ import { AuthModalProvider } from "./components/auth/AuthModal";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import "./globals.css";
-
+import { Analytics } from "@vercel/analytics/next";
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
@@ -31,9 +31,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <AuthModalProvider>
-          <Navbar user={user && { fullName: user.fullName, email: user.email }} />
+          <Navbar
+            user={user && { fullName: user.fullName, email: user.email }}
+          />
           {children}
           <Footer />
+          <Analytics />
         </AuthModalProvider>
       </body>
     </html>
