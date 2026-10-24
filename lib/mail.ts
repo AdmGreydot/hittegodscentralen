@@ -99,8 +99,8 @@ export function mailButton(href: string, label: string) {
 }
 
 // Max attempts per hour for one visitor (by IP, unless another key is given), per kind: mails
-// sent from the forms, and new categories created from the item wizard.
-const RATE_LIMIT = { contact: 5, item: 5, signup: 5, reset: 5, "reset-email": 3, category: 5 } as const;
+// sent from the forms.
+const RATE_LIMIT = { contact: 5, item: 5, signup: 5, reset: 5, "reset-email": 3 } as const;
 export type MailKind = keyof typeof RATE_LIMIT;
 
 // Records the attempt and returns false if the limit is reached. Keys are only stored hashed.

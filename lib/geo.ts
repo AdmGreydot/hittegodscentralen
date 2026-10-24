@@ -121,6 +121,47 @@ export async function reverseGeocode(
   };
 }
 
+export type GeocodeResult = {
+  latitude: number;
+  longitude: number;
+  // True when the street address was found; false when the point is only the postal code's or
+  // the city's centre.
+  exact: boolean;
+};
+
+/**
+ * Turns a typed Danish place into a point. Tries the street address first and falls back to
+ * the postal code and city. Null if nothing is found or the lookup fails.
+ *
+ * @example
+ * await geocodeAddress({ address: "Øster Farimagsgade 3A", postalCode: "1353", city: "København" });
+ * // { latitude: 55.68..., longitude: 12.57..., exact: true }
+ */
+export async function geocodeAddress(
+  { address, postalCode, city }: { address: string; postalCode: string; city: string },
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<GeocodeResult | null> {
+  const area: Record<string, string> = {};
+  if (/^\d{4}$/.test(postalCode.trim())) area.postalcode = postalCode.trim();
+  if (city.trim()) area.city = city.trim();
+
+  const tries: { params: Record<string, string>; exact: boolean }[] = [];
+  if (address.trim()) tries.push({ params: { street: address.trim(), ...area }, exact: true });
+  if (Object.keys(area).length) tries.push({ params: area, exact: false });
+
+  for (const { params, exact } of tries) {
+    const results: NominatimPlace[] | null = await nominatim(
+      "/search",
+      { ...params, countrycodes: "dk", limit: "1" },
+      signal,
+    ).catch(() => null);
+    if (signal?.aborted) return null;
+    const place = results?.[0];
+    if (place) return { latitude: Number(place.lat), longitude: Number(place.lon), exact };
+  }
+  return null;
+}
+
 // Municipality and an approximate centre point for a Danish postal code. Null if not found.
 export async function lookupPostalCode(postalCode: string) {
   if (!/^\d{4}$/.test(postalCode)) return null;

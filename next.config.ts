@@ -14,6 +14,15 @@ const nextConfig: NextConfig = {
       // Photos used by the test data in supabase/seed.sql.
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
+    // Uploaded images get a random path and never change, so cache optimized versions for 31 days
+    // instead of the default 4 hours. Fewer transformations keeps us within Vercel's limits.
+    minimumCacheTTL: 2678400,
+    // Fewer widths than the defaults (15 in total). Uploads are at most 1600px wide (resizeImage.ts);
+    // the largest sizes are only used by the full-width hero, which is a static import.
+    deviceSizes: [640, 828, 1080, 1280, 1920],
+    imageSizes: [96, 256],
+    qualities: [75],
+    formats: ["image/webp"],
   },
   // The page for organisations moved from /business; keep old links working.
   async redirects() {

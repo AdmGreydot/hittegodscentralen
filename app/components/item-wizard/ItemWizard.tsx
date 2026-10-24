@@ -18,14 +18,11 @@ import { honeypotInputProps } from "../../../lib/honeypot";
 import Stepper from "./Stepper";
 import { ContactStep, DetailsStep, LocationStep, ReviewStep, TypeStep } from "./steps";
 
-type Category = { id: number; name: string };
-
 // Which step each field lives on, so a server-side error can send the user back to it.
 const FIELD_STEP: Partial<Record<keyof ItemDraft, number>> = {
   type: 0,
   title: 1,
   description: 1,
-  category: 1,
   image: 1,
   region: 2,
   city: 2,
@@ -39,13 +36,11 @@ const FIELD_STEP: Partial<Record<keyof ItemDraft, number>> = {
 // step says "Gem ændringer"; in "create" mode you finish with "Opret opslag" on the last step.
 export default function ItemWizard({
   mode,
-  categories,
   initialDraft,
   itemId,
   userEmail,
 }: {
   mode: "create" | "edit";
-  categories: Category[];
   initialDraft?: Partial<ItemDraft>;
   itemId?: string; // the item being edited
   userEmail: string | null; // set when logged in: the contact step is skipped and this is used
@@ -119,7 +114,7 @@ export default function ItemWizard({
 
     const form = new FormData();
     const fields = [
-      "type", "title", "description", "category", "region",
+      "type", "title", "description", "region",
       "city", "postalCode", "address", "occurredOn", "email",
     ] as const;
     for (const field of fields) form.set(field, draft[field] ?? "");
@@ -186,7 +181,7 @@ export default function ItemWizard({
           <div className="p-6 sm:p-8">
             {step === 0 && <TypeStep draft={draft} errors={errors} update={update} />}
             {step === 1 && (
-              <DetailsStep draft={draft} errors={errors} update={update} categories={categories} />
+              <DetailsStep draft={draft} errors={errors} update={update} />
             )}
             {step === 2 && <LocationStep draft={draft} errors={errors} update={update} />}
             {step === 3 && <ContactStep draft={draft} errors={errors} update={update} />}

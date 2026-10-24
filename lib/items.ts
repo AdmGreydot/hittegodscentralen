@@ -97,8 +97,6 @@ export async function searchItems(filters: ItemFilters) {
   if (filters.regions.length) query = query.in("region", filters.regions);
   if (filters.municipalities.length)
     query = query.in("municipality", filters.municipalities);
-  if (filters.categories.length)
-    query = query.in("category_id", filters.categories);
   if (filters.from)
     query = query.gte("occurred_at", copenhagenMidnight(filters.from));
   if (filters.to)
@@ -132,35 +130,25 @@ export type ItemFacets = {
   lastCreatedAt: string | null;
   regions: FacetOption[];
   municipalities: FacetOption[];
-  categories: FacetOption[];
 };
 
 // Filter options with counts across all active items.
 export async function getItemFacets(): Promise<ItemFacets> {
   const supabase = await createClient();
 
-  const [itemsResult, categoriesResult] = await Promise.all([
-    supabase
+  const itemsResult = await supabase
       .from("items")
-      .select("region, municipality, postal_code, category_id, created_at")
+      .select("region, municipality, postal_code, created_at")
       .eq("status", "active")
       .returns<
         {
           region: string | null;
           municipality: string | null;
           postal_code: string | null;
-          category_id: number;
           created_at: string;
         }[]
-      >(),
-    supabase
-      .from("categories")
-      .select("id, name, user_created")
-      .order("name")
-      .returns<{ id: number; name: string; user_created: boolean }[]>(),
-  ]);
+      >();
   if (itemsResult.error) throw itemsResult.error;
-  if (categoriesResult.error) throw categoriesResult.error;
   const rows = itemsResult.data;
 
   const regionCounts = new Map<string, number>();
@@ -168,7 +156,6 @@ export async function getItemFacets(): Promise<ItemFacets> {
     string,
     { count: number; postalCodes: Set<string> }
   >();
-  const categoryCounts = new Map<number, number>();
 
   for (const row of rows) {
     if (row.region)
@@ -182,10 +169,6 @@ export async function getItemFacets(): Promise<ItemFacets> {
       if (row.postal_code) entry.postalCodes.add(row.postal_code);
       municipalities.set(row.municipality, entry);
     }
-    categoryCounts.set(
-      row.category_id,
-      (categoryCounts.get(row.category_id) ?? 0) + 1,
-    );
   }
 
   const byLabel = (a: FacetOption, b: FacetOption) =>
@@ -216,15 +199,6 @@ export async function getItemFacets(): Promise<ItemFacets> {
               : `${codes[0]}–${codes[codes.length - 1]}`;
         return { value, label: value, count, hint, keywords: codes.join(" ") };
       })
-      .sort(byLabel),
-    // Categories users created only show once they have items, so empty ones don't clutter the list.
-    categories: categoriesResult.data
-      .filter((c) => !c.user_created || categoryCounts.has(c.id))
-      .map((c) => ({
-        value: String(c.id),
-        label: c.name,
-        count: categoryCounts.get(c.id) ?? 0,
-      }))
       .sort(byLabel),
   };
 }
@@ -371,17 +345,6 @@ export async function getSimilarItems(
   return data.map(toCard);
 }
 
-// All categories, alphabetically, for dropdowns.
-export async function getCategories() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, name")
-    .order("name")
-    .returns<{ id: number; name: string }[]>();
-  if (error) throw error;
-  return data.sort((a, b) => a.name.localeCompare(b.name, "da"));
-}
 
 export type MyItem = ItemCard & {
   status: ItemDetail["status"];

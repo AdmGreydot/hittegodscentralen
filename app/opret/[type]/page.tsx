@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "../../../lib/auth";
-import { getCategories } from "../../../lib/items";
 import type { ItemType } from "../../../lib/item-card";
 import ItemWizard from "../../components/item-wizard/ItemWizard";
 
@@ -22,11 +21,10 @@ export default async function CreateTypedItemPage({ params }: PageProps<"/opret/
   const config = TYPES[(await params).type];
   if (!config) notFound();
 
-  const [categories, user] = await Promise.all([getCategories(), getCurrentUser()]);
+  const user = await getCurrentUser();
   return (
     <ItemWizard
       mode="create"
-      categories={categories}
       initialDraft={{ type: config.type }}
       userEmail={user?.email ?? null}
     />
