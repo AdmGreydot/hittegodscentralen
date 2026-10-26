@@ -51,7 +51,7 @@ function subtitle(mode: ContactMode, role: Role) {
     case "chat":
       return `Skriv direkte til ${role.the} via chat. Din besked er privat.`;
     case "login":
-      return `Log ind for at chatte med ${role.the}, eller send en e-mail uden login.`;
+      return `Send en e-mail til ${role.the} uden login, eller log ind for at chatte.`;
     case "mail":
       return `${role.The} har ikke en profil. Send en e-mail via Hittegodscentralen.`;
     case "own":
@@ -227,20 +227,20 @@ function LoginOrMail({
 
   return (
     <>
-      <LoginPrompt owner={owner} role={role} />
-      <div className="mt-5 flex items-center gap-3 text-xs text-zinc-400">
-        <span className="h-px flex-1 bg-zinc-200" />
-        eller
-        <span className="h-px flex-1 bg-zinc-200" />
-      </div>
       <button
         type="button"
         onClick={() => setByMail(true)}
-        className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-rust font-medium text-white transition-colors hover:bg-brand-rust/90"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-rust font-medium text-white transition-colors hover:bg-brand-rust/90"
       >
         <Mail size={18} aria-hidden />
         Send en e-mail uden login
       </button>
+      <div className="my-5 flex items-center gap-3 text-xs text-zinc-400">
+        <span className="h-px flex-1 bg-zinc-200" />
+        eller
+        <span className="h-px flex-1 bg-zinc-200" />
+      </div>
+      <LoginPrompt owner={owner} role={role} />
     </>
   );
 }
